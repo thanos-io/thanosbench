@@ -11,7 +11,7 @@ See `make build && ./thanosbench --help` for available commands.
 * cmds/thanosbench - single binary for all tools.
 * config - library of mimic-style Go configurations (e.g to deploy Thanos or Prometheus on opinionated Kubernetes)
 * pkg - library of non-configuration Go packages. 
-* benchmarks - set of benchmarks/tests for different cases/issue/testing aimed currenty for kubernetes.
+* benchmarks - set of benchmarks/tests for different cases/issue/testing aimed currently for kubernetes.
   * `<benchmark name>` - directory for benchmark using [mimic](https://github.com/bwplotka/mimic) for manifests generation. See [example](/benchmarks/k8s-prometheus-remote-read)
     * gen-manifests - generated YAMLs.
     * tests - directory for all test scripts (preferable in Go).
