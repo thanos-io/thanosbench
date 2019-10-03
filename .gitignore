@@ -1,12 +1,29 @@
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+.envrc
 
-# Test binary, build with `go test -c`
-*.test
+/prometheus
+/thanosbench
+/vendor/
 
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
+# Ignore minikube setup working dirs.
+kube/bin
+kube/.kube
+kube/.minikube
+
+# Ignore e2e working dirs.
+data/
+
+# Ignore promu artifacts.
+/.build
+/.release
+/.tarballs
+
+/.idea
+/*.iml
+
+website/public/
+website/docs-pre-processed/
+!website/data
+
+tmp/bin
+
+.bin
