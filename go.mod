@@ -1,7 +1,9 @@
 module github.com/thanos-io/thanosbench
 
 require (
+	github.com/bwplotka/mimic v0.0.0-20190730202618-06ab9976e8ef
 	github.com/go-kit/kit v0.9.0
+	github.com/go-openapi/swag v0.19.4
 	github.com/oklog/run v1.0.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.7.0
@@ -9,6 +11,8 @@ require (
 	github.com/thanos-io/thanos v0.7.0
 	go.uber.org/automaxprocs v1.2.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	k8s.io/api v0.0.0-20190813020757-36bff7324fb7
+	k8s.io/apimachinery v0.0.0-20190809020650-423f5d784010
 )
 
 // We want to replace the client-go version with a specific commit hash,

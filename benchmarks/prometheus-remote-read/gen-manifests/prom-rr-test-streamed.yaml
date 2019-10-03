@@ -1,0 +1,176 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  creationTimestamp: null
+  labels:
+    app: prom-rr-test-streamed
+  name: prom-rr-test-streamed
+  namespace: rr-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prom-rr-test-streamed
+  serviceName: prom-rr-test-streamed
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: prom-rr-test-streamed
+        version: prometheusv2.11.0-rc.0-rr-streaming_thanosv0.5.0-rr-streamed2
+    spec:
+      containers:
+      - args:
+        - --config.file=/etc/prometheus/prometheus.yaml
+        - --log.level=info
+        - --storage.remote.read-concurrent-limit=99999
+        - --storage.remote.read-sample-limit=9999999999999999
+        - --storage.tsdb.path=/data-shared/prometheus
+        - --storage.tsdb.min-block-duration=2h
+        - --storage.tsdb.max-block-duration=2h
+        - --storage.tsdb.retention.time=2d
+        - --web.enable-lifecycle
+        - --web.enable-admin-api
+        env:
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: bplotka/prometheus:v2.11.0-rc.0-rr-streaming
+        imagePullPolicy: Always
+        name: prometheus
+        ports:
+        - containerPort: 9090
+          name: http
+        readinessProbe:
+          httpGet:
+            path: -/ready
+            port: 9090
+          successThreshold: 3
+        resources:
+          limits:
+            cpu: "1"
+            memory: 10Gi
+          requests:
+            cpu: "1"
+            memory: 10Gi
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 1000
+        volumeMounts:
+        - mountPath: /etc/prometheus
+          name: prometheus-config
+        - mountPath: /data-shared
+          name: prom-rr-test-streamed
+      - args:
+        - sidecar
+        - --log.level=debug
+        - --debug.name=$(POD_NAME)
+        - --http-address=0.0.0.0:19190
+        - --grpc-address=0.0.0.0:19090
+        - --prometheus.url=http://localhost:9090
+        - --tsdb.path=/data-shared/prometheus
+        command:
+        - thanos
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: improbable/thanos:v0.5.0-rr-streamed2
+        imagePullPolicy: Always
+        name: thanos
+        ports:
+        - containerPort: 19190
+          name: m-sidecar
+        - containerPort: 19090
+          name: grpc-sidecar
+        readinessProbe:
+          httpGet:
+            path: metrics
+            port: 19190
+        resources:
+          limits:
+            cpu: "1"
+            memory: 4Gi
+          requests:
+            cpu: "1"
+            memory: 4Gi
+        volumeMounts:
+        - mountPath: /data-shared
+          name: prom-rr-test-streamed
+      initContainers:
+      - args:
+        - synthetic
+        - |-
+          --input=[{
+            "type": "gauge",
+            "jitter": 20,
+            "max": 200000000,
+            "min": 100000000,
+            "result": {"multiplier":10000,"resultType":"vector","result":[{"metric":{"__name__":"kube_pod_container_resource_limits_memory_bytes","cluster":"eu1","container":"addon-resizer","instance":"172.17.0.9:8080","job":"kube-state-metrics","namespace":"kube-system","node":"minikube","pod":"kube-state-metrics-68f6cc566c-vp566"}}]}
+          }]
+        - --output-dir=/data-shared/prometheus
+        - --retention=24h
+        command:
+        - /bin/blockgen
+        image: improbable/blockgen:master-894c9481c4
+        name: blockgen
+        resources:
+          limits:
+            cpu: "1"
+            memory: 10Gi
+          requests:
+            cpu: "1"
+            memory: 10Gi
+        volumeMounts:
+        - mountPath: /data-shared
+          name: prom-rr-test-streamed
+      volumes:
+      - configMap:
+          name: prometheus-config
+        name: prometheus-config
+      - name: prom-rr-test-streamed
+  updateStrategy: {}
+status:
+  replicas: 0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: prom-rr-test-streamed
+  name: prom-rr-test-streamed
+  namespace: rr-test
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 9090
+    targetPort: 9090
+  - name: grpc-sidecar
+    port: 19090
+    targetPort: 19090
+  - name: http-sidecar
+    port: 19190
+    targetPort: 19190
+  selector:
+    app: prom-rr-test-streamed
+  type: ClusterIP
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+data:
+  prometheus.yaml: |
+    global:
+      external_labels:
+        replica: "0"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: prom-rr-test-streamed
+  name: prometheus-config
+  namespace: rr-test
