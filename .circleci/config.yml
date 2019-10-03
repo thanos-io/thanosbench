@@ -26,7 +26,7 @@ jobs:
 
 workflows:
   version: 2
-  thanos:
+  thanosbench:
     jobs:
     - test:
         filters:
