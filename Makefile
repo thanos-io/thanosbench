@@ -1,6 +1,10 @@
 PREFIX            ?= $(shell pwd)
 FILES_TO_FMT      ?= $(shell find . -path ./vendor -prune -o -name '*.go' -print)
 
+# Ensure everything works even if GOPATH is not set, which is often the case.
+# Default to standard GOPATH.
+GOPATH            ?= $(HOME)/go
+
 TMP_GOPATH        ?= /tmp/thanos-go
 GOBIN             ?= $(firstword $(subst :, ,${GOPATH}))/bin
 GO111MODULE       ?= on
