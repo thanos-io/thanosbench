@@ -12,7 +12,6 @@ import (
 
 func registerBlockgen(m map[string]setupFunc, app *kingpin.Application) {
 	cmd := app.Command("blockgen", "")
-	// TODO(bwplotka): Move to pathOrContent from Thanos.
 	config := extflag.RegisterPathOrContent(cmd, "config", "YAML file for series config", true)
 
 	outputDir := cmd.Flag("output-dir", "Output directory for generated TSDB data.").Required().String()
