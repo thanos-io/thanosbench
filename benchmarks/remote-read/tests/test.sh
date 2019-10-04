@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-set -e
+set -ex
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-cd ${DIR}/../
+cd ${DIR}/
 
 TARGET_URL=$1
 
-MIN_TDIFF="-12 hours"
+MIN_TDIFF="-6 hours"
 MAX_TDIFF="-4 hours"
 
 MIN_T=$(($(date +%s%N -d "${MIN_TDIFF}")/1000000))
@@ -19,7 +19,7 @@ echo "Fetching 10k series StoreAPI.Series from sidecar via RR"
 echo "'min_time'=${MIN_T} ${MIN_TDIFF} 'max_time'=${MAX_T} ${MAX_TDIFF}"
 GOGOPROTO_ROOT="$(GO111MODULE=on go list -f '{{ .Dir }}' -m github.com/gogo/protobuf)"
 
-time $(go env ${GOBIN})/grpcurl \
+time "$(go env GOBIN)/grpcurl" \
 -plaintext -proto \
 ./rpc.proto -proto ./types.proto \
 -import-path . \

@@ -1,6 +1,9 @@
 PREFIX            ?= $(shell pwd)
 FILES_TO_FMT      ?= $(shell find . -path ./vendor -prune -o -name '*.go' -print)
 
+DOCKER_IMAGE_REPO ?= quay.io/thanos/thanosbench
+DOCKER_IMAGE_TAG  ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))-$(shell date +%Y-%m-%d)-$(shell git rev-parse --short HEAD)
+
 # Ensure everything works even if GOPATH is not set, which is often the case.
 # Default to standard GOPATH.
 GOPATH            ?= $(HOME)/go
@@ -98,6 +101,19 @@ tarballs-release: $(PROMU)
 deps:
 	@go mod tidy
 	@go mod verify
+
+# docker builds docker with no tag.
+.PHONY: docker
+docker: build
+	@echo ">> building docker image 'thanosbench'"
+	@docker build -t "thanosbench" .
+
+# docker-push pushes docker image build under `thanos` to "$(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG)"
+.PHONY: docker-push
+docker-push:
+	@echo ">> pushing thanosbench image as $(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG)"
+	@docker tag "thanosbench" "$(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG)"
+	@docker push "$(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG)"
 
 # format formats the code (including imports format).
 .PHONY: format

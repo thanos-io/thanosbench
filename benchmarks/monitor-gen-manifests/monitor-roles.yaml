@@ -1,3 +1,5 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
   labels:
@@ -12,6 +14,8 @@ subjects:
   name: monitor
   namespace: default
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
   creationTimestamp: null
   labels:
@@ -36,6 +40,8 @@ rules:
   verbs:
   - get
 ---
+apiVersion: v1
+kind: ServiceAccount
 metadata:
   creationTimestamp: null
   labels:

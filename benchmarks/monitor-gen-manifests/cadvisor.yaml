@@ -1,3 +1,5 @@
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
 metadata:
   creationTimestamp: null
   labels:
@@ -10,7 +12,8 @@ spec:
   - pathPrefix: /sys
   - pathPrefix: /var/lib/docker
   - pathPrefix: /dev/disk
-  fsGroup: {}
+  fsGroup:
+    rule: RunAsAny
   runAsUser:
     rule: RunAsAny
   seLinux:
@@ -20,6 +23,8 @@ spec:
   volumes:
   - '*'
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
   creationTimestamp: null
   labels:
@@ -35,6 +40,8 @@ rules:
   verbs:
   - use
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
   labels:
@@ -49,6 +56,8 @@ subjects:
   name: cadvisor
   namespace: default
 ---
+apiVersion: v1
+kind: ServiceAccount
 metadata:
   creationTimestamp: null
   labels:

@@ -30,23 +30,7 @@ func main() {
 	{
 		generator := generator.With("remote-read", "gen-manifests")
 
-		bench.GenRemoteReadBenchPrometheus(generator, "prometheus", namespace, dockerimage.Image{}, dockerimage.Image{})
-		bench.GenRemoteReadBenchPrometheus(generator, "prometheus-rr-streamed", namespace, dockerimage.Image{}, dockerimage.Image{})
-
-		//// Baseline.
-		//bench.GenRRTestPrometheus(
-		//	generator,
-		//	,
-		//	"v2.11.0-rc.0-clear",
-		//	"v0.5.0",
-		//)
-		//
-		//// Streamed.
-		//bench.GenRRTestPrometheus(
-		//	generator,
-		//	"prom-rr-test-streamed",
-		//	"v2.11.0-rc.0-rr-streaming",
-		//	"v0.5.0-rr-streamed2",
-		//)
+		bench.GenRemoteReadBenchPrometheus(generator, "prometheus", namespace, dockerimage.PublicPrometheus("v2.12.0"), dockerimage.PublicThanos("v0.7.0"))
+		bench.GenRemoteReadBenchPrometheus(generator, "prometheus-rr-streamed", namespace, dockerimage.PublicPrometheus("v2.13.0"), dockerimage.PublicThanos("v0.7.0"))
 	}
 }

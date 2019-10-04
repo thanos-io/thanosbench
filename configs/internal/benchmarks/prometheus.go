@@ -6,8 +6,6 @@ import (
 	"io/ioutil"
 	"path"
 
-	v1 "k8s.io/api/rbac/v1"
-
 	"github.com/bwplotka/mimic"
 	"github.com/bwplotka/mimic/abstractions/kubernetes/volumes"
 	"github.com/bwplotka/mimic/encoding"
@@ -21,6 +19,7 @@ import (
 	"github.com/thanos-io/thanosbench/pkg/blockgen"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -32,7 +31,7 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 		Namespace: namespace,
 		Name:      name,
 
-		Img:       dockerimage.PublicPrometheus("v2.12.0-rc.0-rr-streaming"),
+		Img:       dockerimage.PublicPrometheus("v2.13.0-rc.0"),
 		ThanosImg: dockerimage.PublicThanos("v0.7.0"),
 
 		Resources: corev1.ResourceRequirements{
@@ -57,13 +56,20 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 		},
 		ServiceAccountName: name,
 		Config: prometheus.Config{
+			GlobalConfig: prometheus.GlobalConfig{
+				ExternalLabels: map[model.LabelName]model.LabelValue{
+					"monitor": "0",
+				},
+			},
 			ScrapeConfigs: []*prometheus.ScrapeConfig{
 				{
-					// TBD
 					JobName: "kubernetes-nodes-cadvisor",
 					ServiceDiscoveryConfig: sdconfig.ServiceDiscoveryConfig{
 						KubernetesSDConfigs: []*kubernetes.SDConfig{
-							{Role: kubernetes.RoleNode},
+							{
+								Role:               kubernetes.RolePod,
+								NamespaceDiscovery: kubernetes.NamespaceDiscovery{Names: []string{namespace}},
+							},
 						},
 					},
 					RelabelConfigs: []*prometheus.RelabelConfig{
@@ -96,13 +102,18 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 				{
 					JobName: "kubernetes-pods",
 					ServiceDiscoveryConfig: sdconfig.ServiceDiscoveryConfig{
-						KubernetesSDConfigs: []*kubernetes.SDConfig{{Role: kubernetes.RolePod}},
+						KubernetesSDConfigs: []*kubernetes.SDConfig{
+							{
+								Role:               kubernetes.RolePod,
+								NamespaceDiscovery: kubernetes.NamespaceDiscovery{Names: []string{namespace}},
+							},
+						},
 					},
 					RelabelConfigs: []*prometheus.RelabelConfig{
 						{
-							SourceLabels: model.LabelNames{"__meta_kubernetes_container_port_name"},
+							SourceLabels: model.LabelNames{"__meta_kubernetes_pod_container_port_name"},
 							Action:       prometheus.RelabelKeep,
-							Regex:        prometheus.MustNewRegexp("^(http|m-\\d+)$"),
+							Regex:        prometheus.MustNewRegexp("^(http|m-.+)$"),
 							TargetLabel:  "__address__",
 						},
 						{
@@ -129,10 +140,10 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 						{
 							Action: prometheus.RelabelReplace,
 							SourceLabels: model.LabelNames{
-								"app",
-								"__meta_kubernetes_container_port_name",
+								"job",
+								"__meta_kubernetes_pod_container_port_name",
 							},
-							Regex:       prometheus.MustNewRegexp("(\\d+);m-(\\d+)"),
+							Regex:       prometheus.MustNewRegexp("(.+);m-(.+)"),
 							Replacement: "$1-$2",
 							TargetLabel: "job",
 						},
@@ -142,7 +153,12 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 		},
 	})
 
+	// TODO(bwplotka): Consider scoping down to just `role` as we are fine with limiting montoring to one namespace.
 	clr := v1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRole",
+			APIVersion: "rbac.authorization.k8s.io/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
@@ -174,6 +190,10 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 	}
 
 	clrBinding := v1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRoleBinding",
+			APIVersion: "rbac.authorization.k8s.io/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
@@ -195,6 +215,10 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 	}
 
 	svc := corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
@@ -223,7 +247,7 @@ type PrometheusOpts struct {
 	Resources corev1.ResourceRequirements
 
 	// If empty, no data autogeneration will be defined.
-	BlockgenConfig []blockgen.Config
+	BlockgenConfig *blockgen.Config
 	BlockgenImg    dockerimage.Image
 
 	ThanosImg       dockerimage.Image
@@ -311,28 +335,6 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 		},
 	}
 
-	blockgenInitContainer := corev1.Container{
-		Name:    "blockgen",
-		Image:   opts.BlockgenImg.String(),
-		Command: []string{"/bin/thanosbench"},
-		Args: []string{
-			"blockgen",
-			fmt.Sprintf("--config=%s", string(genInPlace(encoding.YAML(opts.BlockgenConfig)))),
-			fmt.Sprintf("--output-dir=%s", promDataPath),
-		},
-		VolumeMounts: []corev1.VolumeMount{sharedVM.VolumeMount},
-		Resources: corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("1"),
-				corev1.ResourceMemory: resource.MustParse("10Gi"),
-			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("1"),
-				corev1.ResourceMemory: resource.MustParse("10Gi"),
-			},
-		},
-	}
-
 	prometheusContainer := corev1.Container{
 		Name:  "prometheus",
 		Image: opts.Img.String(),
@@ -345,11 +347,11 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 			fmt.Sprintf("--storage.tsdb.path=%s", promDataPath),
 			"--storage.tsdb.min-block-duration=2h",
 			// Avoid compaction for less moving parts in results.
-			"--storage.tsdb.max-block-duration=" + func() string {
+			func() string {
 				if opts.DisableCompactions {
-					return "2h"
+					return "--storage.tsdb.max-block-duration=2h"
 				}
-				return ""
+				return "--storage.tsdb.max-block-duration=4h"
 			}(),
 			"--storage.tsdb.retention.time=2d",
 			"--web.enable-lifecycle",
@@ -397,6 +399,7 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 		Resources: opts.Resources,
 	}
 
+	// TODO(bwplotka): Allow dynamic rule/config reload.
 	thanosSidecarContainer := corev1.Container{
 		Name:            "thanos",
 		Image:           opts.ThanosImg.String(),
@@ -438,7 +441,40 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 			},
 		},
 		VolumeMounts: volumes.VolumesAndMounts{sharedVM}.VolumeMounts(),
-		Resources:    opts.ThanosResources,
+		SecurityContext: &corev1.SecurityContext{
+			RunAsNonRoot: swag.Bool(false),
+			RunAsUser:    swag.Int64(1000),
+		},
+		Resources: opts.ThanosResources,
+	}
+
+	var initContainers []corev1.Container
+	if opts.BlockgenConfig != nil {
+		initContainers = append(initContainers, corev1.Container{
+			Name:    "blockgen",
+			Image:   opts.BlockgenImg.String(),
+			Command: []string{"/bin/thanosbench"},
+			Args: []string{
+				"blockgen",
+				fmt.Sprintf("--config=%s", string(genInPlace(encoding.JSON(*opts.BlockgenConfig)))),
+				fmt.Sprintf("--output-dir=%s", promDataPath),
+			},
+			VolumeMounts: []corev1.VolumeMount{sharedVM.VolumeMount},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("5Gi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("5Gi"),
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				RunAsNonRoot: swag.Bool(false),
+				RunAsUser:    swag.Int64(1000),
+			},
+		})
 	}
 
 	set := appsv1.StatefulSet{
@@ -464,7 +500,7 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: opts.ServiceAccountName,
-					InitContainers:     []corev1.Container{blockgenInitContainer},
+					InitContainers:     initContainers,
 					Containers:         []corev1.Container{prometheusContainer, thanosSidecarContainer},
 					Volumes:            volumes.VolumesAndMounts{promConfigAndMount.VolumeAndMount(), sharedVM}.Volumes(),
 				},
