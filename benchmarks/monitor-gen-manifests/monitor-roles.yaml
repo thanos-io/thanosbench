@@ -1,0 +1,43 @@
+metadata:
+  creationTimestamp: null
+  labels:
+    app: monitor
+  name: monitor
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: monitor
+subjects:
+- kind: ServiceAccount
+  name: monitor
+  namespace: default
+---
+metadata:
+  creationTimestamp: null
+  labels:
+    app: monitor
+  name: monitor
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - nodes/proxy
+  - services
+  - endpoints
+  - pods
+  - ingresses
+  verbs:
+  - list
+  - watch
+  - get
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+metadata:
+  creationTimestamp: null
+  labels:
+    app: monitor
+  name: monitor

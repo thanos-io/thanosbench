@@ -1,12 +1,12 @@
 package blockgen
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
@@ -20,6 +20,12 @@ import (
 )
 
 // TODO(bwplotka): Allow more realistic output.
+type Config struct {
+	InputSeries    []Series
+	Retention      time.Duration
+	ScrapeInterval time.Duration
+}
+
 type Series struct {
 	Type           string // gauge, counter (if counter we treat below as rate aim)
 	Jitter         float64
@@ -30,28 +36,23 @@ type Series struct {
 }
 
 type QueryData struct {
-	ResultType model.ValueType `json:"resultType"`
-	Result     model.Vector    `json:"result"`
+	ResultType model.ValueType `yaml:"resultType"`
+	Result     model.Vector    `yaml:"result"`
 }
 
-func LoadSeries(inputFile string) ([]Series, error) {
-	b, err := ioutil.ReadFile(inputFile)
-	if err != nil {
-		return nil, errors.Wrapf(err, "loading file %s", inputFile)
+func GenerateTSDB(logger log.Logger, dir string, configContent []byte) error {
+	var config Config
+	if err := yaml.Unmarshal(configContent, &config); err != nil {
+		return err
 	}
 
-	var s []Series
-	if err := json.Unmarshal(b, &s); err != nil {
-		return nil, err
+	if config.ScrapeInterval == 0 {
+		config.ScrapeInterval = 15 * time.Second
 	}
 
-	return s, nil
-}
-
-func GenerateTSDB(logger log.Logger, dir string, series []Series, retention time.Duration, scrapeInterval time.Duration) error {
 	// Same code as Prometheus for compaction levels and max block.
 	rngs := tsdb.ExponentialBlockRanges(int64(time.Duration(2*time.Hour).Seconds()*1000), 10, 3)
-	maxBlockDuration := retention / 10
+	maxBlockDuration := config.Retention / 10
 	for i, v := range rngs {
 		if v > int64(maxBlockDuration.Seconds()*1000) {
 			rngs = rngs[:i]
@@ -63,9 +64,11 @@ func GenerateTSDB(logger log.Logger, dir string, series []Series, retention time
 		rngs = append(rngs, int64(time.Duration(2*time.Hour).Seconds()*1000))
 	}
 
+	// TODO(bwplotka): Moved to something like https://github.com/thanos-io/thanos/blob/master/pkg/testutil/prometheus.go#L289
+	//  to actually generate blocks! It will be fine for TSDB use cases as well.
 	db, err := tsdb.Open(dir, nil, nil, &tsdb.Options{
 		BlockRanges:       rngs,
-		RetentionDuration: uint64(retention.Seconds() * 1000),
+		RetentionDuration: uint64(config.Retention.Seconds() * 1000),
 		NoLockfile:        true,
 	})
 	if err != nil {
@@ -77,10 +80,10 @@ func GenerateTSDB(logger log.Logger, dir string, series []Series, retention time
 	// We are fine with this.
 	n := time.Now()
 	maxTime := timestamp.FromTime(n)
-	minTime := timestamp.FromTime(n.Add(-retention))
+	minTime := timestamp.FromTime(n.Add(-config.Retention))
 
 	generators := make(map[string]gen)
-	for _, in := range series {
+	for _, in := range config.InputSeries {
 		for _, r := range in.Result.Result {
 			lset := labels.New()
 			for n, v := range r.Metric {
@@ -100,7 +103,7 @@ func GenerateTSDB(logger log.Logger, dir string, series []Series, retention time
 			case "counter":
 				// Does not work well (: Too naive.
 				generators[lset.String()] = &counterGen{
-					interval:       scrapeInterval,
+					interval:       config.ScrapeInterval,
 					maxTime:        maxTime,
 					minTime:        minTime,
 					lset:           lset,
@@ -112,7 +115,7 @@ func GenerateTSDB(logger log.Logger, dir string, series []Series, retention time
 				}
 			case "gauge":
 				generators[lset.String()] = &gaugeGen{
-					interval:       scrapeInterval,
+					interval:       config.ScrapeInterval,
 					maxTime:        maxTime,
 					minTime:        minTime,
 					lset:           lset,

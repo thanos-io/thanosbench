@@ -1,0 +1,174 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  creationTimestamp: null
+  labels:
+    app: prometheus-rr-streamed
+  name: prometheus-rr-streamed
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-rr-streamed
+  serviceName: prometheus-rr-streamed
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: prometheus-rr-streamed
+    spec:
+      containers:
+      - args:
+        - --config.file=/etc/prometheus/prometheus.yaml
+        - --log.level=info
+        - --storage.remote.read-concurrent-limit=99999
+        - --storage.remote.read-sample-limit=9999999999999999
+        - --storage.tsdb.path=/data-shared/prometheus
+        - --storage.tsdb.min-block-duration=2h
+        - --storage.tsdb.max-block-duration=2h
+        - --storage.tsdb.retention.time=2d
+        - --web.enable-lifecycle
+        - --web.enable-admin-api
+        env:
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: '/:'
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+        name: prometheus
+        ports:
+        - containerPort: 9090
+          name: http
+        readinessProbe:
+          httpGet:
+            path: -/ready
+            port: 9090
+          successThreshold: 3
+        resources:
+          limits:
+            cpu: "1"
+            memory: 10Gi
+          requests:
+            cpu: "1"
+            memory: 10Gi
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 1000
+        volumeMounts:
+        - mountPath: /etc/prometheus
+          name: prometheus-config
+        - mountPath: /data-shared
+          name: prometheus-rr-streamed
+      - args:
+        - sidecar
+        - --log.level=debug
+        - --debug.name=$(POD_NAME)
+        - --http-address=0.0.0.0:19190
+        - --grpc-address=0.0.0.0:19090
+        - --prometheus.url=http://localhost:9090
+        - --tsdb.path=/data-shared/prometheus
+        command:
+        - thanos
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: '/:'
+        imagePullPolicy: Always
+        name: thanos
+        ports:
+        - containerPort: 19190
+          name: m-sidecar
+        - containerPort: 19090
+          name: grpc-sidecar
+        readinessProbe:
+          httpGet:
+            path: metrics
+            port: 19190
+        resources:
+          limits:
+            cpu: "1"
+            memory: 5Gi
+          requests:
+            cpu: "1"
+            memory: 5Gi
+        volumeMounts:
+        - mountPath: /data-shared
+          name: prometheus-rr-streamed
+      initContainers:
+      - args:
+        - blockgen
+        - |
+          --config=[]
+        - --output-dir=/data-shared/prometheus
+        command:
+        - /bin/thanosbench
+        image: '/:'
+        name: blockgen
+        resources:
+          limits:
+            cpu: "1"
+            memory: 10Gi
+          requests:
+            cpu: "1"
+            memory: 10Gi
+        volumeMounts:
+        - mountPath: /data-shared
+          name: prometheus-rr-streamed
+      volumes:
+      - configMap:
+          name: prometheus-config
+        name: prometheus-config
+      - name: prometheus-rr-streamed
+  updateStrategy: {}
+status:
+  replicas: 0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: prometheus-rr-streamed
+  name: prometheus-rr-streamed
+  namespace: default
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 9090
+    targetPort: 9090
+  - name: grpc-sidecar
+    port: 19090
+    targetPort: 19090
+  - name: http-sidecar
+    port: 19190
+    targetPort: 19190
+  selector:
+    app: prometheus-rr-streamed
+  type: ClusterIP
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+data:
+  prometheus.yaml: |
+    global:
+      external_labels:
+        replica: "0"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: prometheus-rr-streamed
+  name: prometheus-config
+  namespace: default

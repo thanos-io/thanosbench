@@ -3,21 +3,20 @@ kind: StatefulSet
 metadata:
   creationTimestamp: null
   labels:
-    app: prom-rr-test-streamed
-  name: prom-rr-test-streamed
-  namespace: rr-test
+    app: monitor
+  name: monitor
+  namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: prom-rr-test-streamed
-  serviceName: prom-rr-test-streamed
+      app: monitor
+  serviceName: monitor
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: prom-rr-test-streamed
-        version: prometheusv2.11.0-rc.0-rr-streaming_thanosv0.5.0-rr-streamed2
+        app: monitor
     spec:
       containers:
       - args:
@@ -27,7 +26,7 @@ spec:
         - --storage.remote.read-sample-limit=9999999999999999
         - --storage.tsdb.path=/data-shared/prometheus
         - --storage.tsdb.min-block-duration=2h
-        - --storage.tsdb.max-block-duration=2h
+        - --storage.tsdb.max-block-duration=
         - --storage.tsdb.retention.time=2d
         - --web.enable-lifecycle
         - --web.enable-admin-api
@@ -36,8 +35,14 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: bplotka/prometheus:v2.11.0-rc.0-rr-streaming
+        image: quay.io/thanos/prometheus:v2.12.0-rc.0-rr-streaming
         imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
         name: prometheus
         ports:
         - containerPort: 9090
@@ -50,10 +55,10 @@ spec:
         resources:
           limits:
             cpu: "1"
-            memory: 10Gi
+            memory: 1Gi
           requests:
             cpu: "1"
-            memory: 10Gi
+            memory: 1Gi
         securityContext:
           runAsNonRoot: false
           runAsUser: 1000
@@ -61,7 +66,7 @@ spec:
         - mountPath: /etc/prometheus
           name: prometheus-config
         - mountPath: /data-shared
-          name: prom-rr-test-streamed
+          name: monitor
       - args:
         - sidecar
         - --log.level=debug
@@ -77,7 +82,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: improbable/thanos:v0.5.0-rr-streamed2
+        image: quay.io/thanos/thanos:v0.7.0
         imagePullPolicy: Always
         name: thanos
         ports:
@@ -92,29 +97,22 @@ spec:
         resources:
           limits:
             cpu: "1"
-            memory: 4Gi
+            memory: 200Mi
           requests:
             cpu: "1"
-            memory: 4Gi
+            memory: 200Mi
         volumeMounts:
         - mountPath: /data-shared
-          name: prom-rr-test-streamed
+          name: monitor
       initContainers:
       - args:
-        - synthetic
-        - |-
-          --input=[{
-            "type": "gauge",
-            "jitter": 20,
-            "max": 200000000,
-            "min": 100000000,
-            "result": {"multiplier":10000,"resultType":"vector","result":[{"metric":{"__name__":"kube_pod_container_resource_limits_memory_bytes","cluster":"eu1","container":"addon-resizer","instance":"172.17.0.9:8080","job":"kube-state-metrics","namespace":"kube-system","node":"minikube","pod":"kube-state-metrics-68f6cc566c-vp566"}}]}
-          }]
+        - blockgen
+        - |
+          --config=[]
         - --output-dir=/data-shared/prometheus
-        - --retention=24h
         command:
-        - /bin/blockgen
-        image: improbable/blockgen:master-894c9481c4
+        - /bin/thanosbench
+        image: '/:'
         name: blockgen
         resources:
           limits:
@@ -125,12 +123,13 @@ spec:
             memory: 10Gi
         volumeMounts:
         - mountPath: /data-shared
-          name: prom-rr-test-streamed
+          name: monitor
+      serviceAccountName: monitor
       volumes:
       - configMap:
           name: prometheus-config
         name: prometheus-config
-      - name: prom-rr-test-streamed
+      - name: monitor
   updateStrategy: {}
 status:
   replicas: 0
@@ -140,9 +139,9 @@ kind: Service
 metadata:
   creationTimestamp: null
   labels:
-    app: prom-rr-test-streamed
-  name: prom-rr-test-streamed
-  namespace: rr-test
+    app: monitor
+  name: monitor
+  namespace: default
 spec:
   clusterIP: None
   ports:
@@ -156,7 +155,7 @@ spec:
     port: 19190
     targetPort: 19190
   selector:
-    app: prom-rr-test-streamed
+    app: monitor
   type: ClusterIP
 status:
   loadBalancer: {}
@@ -164,13 +163,55 @@ status:
 apiVersion: v1
 data:
   prometheus.yaml: |
-    global:
-      external_labels:
-        replica: "0"
+    global: {}
+    scrape_configs:
+    - job_name: kubernetes-nodes-cadvisor
+      scheme: https
+      kubernetes_sd_configs:
+      - role: node
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      relabel_configs:
+      - regex: __meta_kubernetes_node_label_(.+)
+        action: labelmap
+      - target_label: __address__
+        replacement: kubernetes.default.svc:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+    - job_name: kubernetes-pods
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_container_port_name]
+        regex: ^(http|m-\d+)$
+        target_label: __address__
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_annotation_thanosbench_io_metric_path]
+        regex: (.+)
+        target_label: __metrics_path__
+        action: replace
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+        action: replace
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: job
+        action: replace
+      - source_labels: [app, __meta_kubernetes_container_port_name]
+        regex: (\d+);m-(\d+)
+        target_label: job
+        replacement: $1-$2
+        action: replace
 kind: ConfigMap
 metadata:
   creationTimestamp: null
   labels:
-    app: prom-rr-test-streamed
+    app: monitor
   name: prometheus-config
-  namespace: rr-test
+  namespace: default

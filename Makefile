@@ -78,6 +78,11 @@ crossbuild: $(PROMU)
 	@echo ">> crossbuilding all binaries"
 	$(PROMU) crossbuild -v
 
+.PHONY: gen
+gen:
+	@echo ">> generating benchmarks configs"
+	@go run configs/main.go generate
+
 .PHONY: promu
 promu: $(PROMU)
 
