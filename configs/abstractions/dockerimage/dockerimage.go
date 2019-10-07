@@ -22,7 +22,7 @@ func PublicThanos(tag string) Image {
 
 func PublicPrometheus(tag string) Image {
 	return Image{
-		Organization: "quay.io/thanos",
+		Organization: "quay.io/prometheus",
 		Project:      "prometheus",
 		Version:      tag,
 	}

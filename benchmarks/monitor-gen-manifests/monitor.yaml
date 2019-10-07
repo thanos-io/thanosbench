@@ -26,7 +26,7 @@ spec:
         - --storage.remote.read-sample-limit=9999999999999999
         - --storage.tsdb.path=/data-shared/prometheus
         - --storage.tsdb.min-block-duration=2h
-        - --storage.tsdb.max-block-duration=
+        - --storage.tsdb.max-block-duration=4h
         - --storage.tsdb.retention.time=2d
         - --web.enable-lifecycle
         - --web.enable-admin-api
@@ -35,7 +35,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/thanos/prometheus:v2.12.0-rc.0-rr-streaming
+        image: quay.io/prometheus/prometheus:v2.13.0-rc.0
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -101,26 +101,9 @@ spec:
           requests:
             cpu: "1"
             memory: 200Mi
-        volumeMounts:
-        - mountPath: /data-shared
-          name: monitor
-      initContainers:
-      - args:
-        - blockgen
-        - |
-          --config=[]
-        - --output-dir=/data-shared/prometheus
-        command:
-        - /bin/thanosbench
-        image: '/:'
-        name: blockgen
-        resources:
-          limits:
-            cpu: "1"
-            memory: 10Gi
-          requests:
-            cpu: "1"
-            memory: 10Gi
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 1000
         volumeMounts:
         - mountPath: /data-shared
           name: monitor
@@ -163,12 +146,17 @@ status:
 apiVersion: v1
 data:
   prometheus.yaml: |
-    global: {}
+    global:
+      external_labels:
+        monitor: "0"
     scrape_configs:
     - job_name: kubernetes-nodes-cadvisor
       scheme: https
       kubernetes_sd_configs:
-      - role: node
+      - role: pod
+        namespaces:
+          names:
+          - default
       bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -185,9 +173,12 @@ data:
     - job_name: kubernetes-pods
       kubernetes_sd_configs:
       - role: pod
+        namespaces:
+          names:
+          - default
       relabel_configs:
-      - source_labels: [__meta_kubernetes_container_port_name]
-        regex: ^(http|m-\d+)$
+      - source_labels: [__meta_kubernetes_pod_container_port_name]
+        regex: ^(http|m-.+)$
         target_label: __address__
         action: keep
       - source_labels: [__meta_kubernetes_pod_annotation_thanosbench_io_metric_path]
@@ -203,8 +194,8 @@ data:
       - source_labels: [__meta_kubernetes_pod_label_app]
         target_label: job
         action: replace
-      - source_labels: [app, __meta_kubernetes_container_port_name]
-        regex: (\d+);m-(\d+)
+      - source_labels: [job, __meta_kubernetes_pod_container_port_name]
+        regex: (.+);m-(.+)
         target_label: job
         replacement: $1-$2
         action: replace

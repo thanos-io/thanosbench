@@ -8,10 +8,10 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.7.0
 	github.com/prometheus/prometheus v1.8.2-0.20190913102521-8ab628b35467 // v1.8.2 is misleading as Prometheus does not have v2 module.
+	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/thanos-io/thanos v0.7.1-0.20191003223108-18a6c537832e
 	go.uber.org/automaxprocs v1.2.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190813020757-36bff7324fb7
 	k8s.io/apimachinery v0.0.0-20190809020650-423f5d784010
 )

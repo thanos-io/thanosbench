@@ -35,7 +35,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: '/:'
+        image: quay.io/prometheus/prometheus:v2.12.0
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -55,10 +55,10 @@ spec:
         resources:
           limits:
             cpu: "1"
-            memory: 10Gi
+            memory: 5Gi
           requests:
             cpu: "1"
-            memory: 10Gi
+            memory: 5Gi
         securityContext:
           runAsNonRoot: false
           runAsUser: 1000
@@ -82,7 +82,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: '/:'
+        image: quay.io/thanos/thanos:v0.7.0
         imagePullPolicy: Always
         name: thanos
         ports:
@@ -101,26 +101,66 @@ spec:
           requests:
             cpu: "1"
             memory: 5Gi
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 1000
         volumeMounts:
         - mountPath: /data-shared
           name: prometheus
       initContainers:
       - args:
         - blockgen
-        - |
-          --config=[]
+        - |-
+          --config={
+            "InputSeries": [
+              {
+                "Type": "gauge",
+                "Jitter": 20,
+                "ChangeInterval": "",
+                "Max": 200000000,
+                "Min": 100000000,
+                "Result": {
+                  "resultType": "vector",
+                  "result": [
+                    {
+                      "metric": {
+                        "__name__": "kube_pod_container_resource_limits_memory_bytes",
+                        "cluster": "eu1",
+                        "container": "addon-resizer",
+                        "instance": "172.17.0.9:8080",
+                        "job": "kube-state-metrics",
+                        "namespace": "kube-system",
+                        "node": "node1",
+                        "pod": "kube-state-metrics-68f6cc566c-vp566"
+                      },
+                      "value": [
+                        0,
+                        "0"
+                      ]
+                    }
+                  ]
+                },
+                "Replicate": 10000
+              }
+            ],
+            "Retention": 86400000000000,
+            "ScrapeInterval": 0
+          }
         - --output-dir=/data-shared/prometheus
         command:
         - /bin/thanosbench
-        image: '/:'
+        image: quay.io/thanos/thanosbench:docker-2019-10-04-19e823a
         name: blockgen
         resources:
           limits:
             cpu: "1"
-            memory: 10Gi
+            memory: 5Gi
           requests:
             cpu: "1"
-            memory: 10Gi
+            memory: 5Gi
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 1000
         volumeMounts:
         - mountPath: /data-shared
           name: prometheus

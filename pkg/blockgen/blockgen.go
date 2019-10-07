@@ -1,17 +1,16 @@
 package blockgen
 
 import (
+	"encoding/json"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/go-kit/kit/log"
-	"github.com/pkg/errors"
-
 	"github.com/go-kit/kit/log/level"
+	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/pkg/timestamp"
 	"github.com/prometheus/prometheus/promql"
@@ -32,17 +31,21 @@ type Series struct {
 	ChangeInterval string
 	Max            float64
 	Min            float64
-	Result         QueryData
+	// Result is an exact Prometheus HTTP query result that would be used to generate series' metrics labels.
+	Result QueryData
+	// Replicate multiples this set given number of times. For example if result has 10 metrics and replicate is 10 we will
+	// have 100 unique series.
+	Replicate int
 }
 
 type QueryData struct {
-	ResultType model.ValueType `yaml:"resultType"`
-	Result     model.Vector    `yaml:"result"`
+	ResultType model.ValueType `json:"resultType"`
+	Result     model.Vector    `json:"result"`
 }
 
 func GenerateTSDB(logger log.Logger, dir string, configContent []byte) error {
 	var config Config
-	if err := yaml.Unmarshal(configContent, &config); err != nil {
+	if err := json.Unmarshal(configContent, &config); err != nil {
 		return err
 	}
 
@@ -82,50 +85,56 @@ func GenerateTSDB(logger log.Logger, dir string, configContent []byte) error {
 	maxTime := timestamp.FromTime(n)
 	minTime := timestamp.FromTime(n.Add(-config.Retention))
 
+	// TODO(bwplotka): Consider sharding for reduced memory use for generating.
+	// TODO(bwplotk): Do it concurrently.
 	generators := make(map[string]gen)
 	for _, in := range config.InputSeries {
 		for _, r := range in.Result.Result {
-			lset := labels.New()
-			for n, v := range r.Metric {
-				lset = append(lset, labels.Label{Name: string(n), Value: string(v)})
-			}
-			//level.Debug(logger).Log("msg", "scheduled generation of series", "lset", lset)
+			for i := 0; i < in.Replicate; i++ {
+				lset := labels.New()
+				for n, v := range r.Metric {
+					lset = append(lset, labels.Label{Name: string(n), Value: string(v)})
+				}
+				if i > 0 {
+					lset = append(lset, labels.Label{Name: "blockgen_fake_replica", Value: strconv.Itoa(i)})
+				}
 
-			var chInterval time.Duration
-			if in.ChangeInterval != "" {
-				chInterval, err = time.ParseDuration(in.ChangeInterval)
-				if err != nil {
-					return err
+				var chInterval time.Duration
+				if in.ChangeInterval != "" {
+					chInterval, err = time.ParseDuration(in.ChangeInterval)
+					if err != nil {
+						return err
+					}
 				}
-			}
 
-			switch strings.ToLower(in.Type) {
-			case "counter":
-				// Does not work well (: Too naive.
-				generators[lset.String()] = &counterGen{
-					interval:       config.ScrapeInterval,
-					maxTime:        maxTime,
-					minTime:        minTime,
-					lset:           lset,
-					min:            in.Min,
-					max:            in.Max,
-					jitter:         in.Jitter,
-					rateInterval:   5 * time.Minute,
-					changeInterval: chInterval,
+				switch strings.ToLower(in.Type) {
+				case "counter":
+					// Does not work well (: Too naive.
+					generators[lset.String()] = &counterGen{
+						interval:       config.ScrapeInterval,
+						maxTime:        maxTime,
+						minTime:        minTime,
+						lset:           lset,
+						min:            in.Min,
+						max:            in.Max,
+						jitter:         in.Jitter,
+						rateInterval:   5 * time.Minute,
+						changeInterval: chInterval,
+					}
+				case "gauge":
+					generators[lset.String()] = &gaugeGen{
+						interval:       config.ScrapeInterval,
+						maxTime:        maxTime,
+						minTime:        minTime,
+						lset:           lset,
+						min:            in.Min,
+						max:            in.Max,
+						jitter:         in.Jitter,
+						changeInterval: chInterval,
+					}
+				default:
+					return errors.Errorf("failed to parse series, unknown metric type: %s", in.Type)
 				}
-			case "gauge":
-				generators[lset.String()] = &gaugeGen{
-					interval:       config.ScrapeInterval,
-					maxTime:        maxTime,
-					minTime:        minTime,
-					lset:           lset,
-					min:            in.Min,
-					max:            in.Max,
-					jitter:         in.Jitter,
-					changeInterval: chInterval,
-				}
-			default:
-				return errors.Errorf("failed to parse series, unknown metric type: %s", in.Type)
 			}
 		}
 	}
