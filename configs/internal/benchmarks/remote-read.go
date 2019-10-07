@@ -57,7 +57,7 @@ func GenRemoteReadBenchPrometheus(gen *mimic.Generator, name string, namespace s
 					},
 				},
 			},
-			Retention: 24 * time.Hour,
+			Retention: 10 * time.Hour,
 		},
 
 		Resources: corev1.ResourceRequirements{

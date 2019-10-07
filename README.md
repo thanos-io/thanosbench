@@ -28,12 +28,12 @@ Use `make gen` to generate `config` templates into `benchmarks`.
 
 ### Prerequisites
 
-You need any recent Kubernetes. The easiest way is to run [`kind`](https://github.com/kubernetes-sigs/kind) however
+1. You need any recent Kubernetes. The easiest way is to run [`kind`](https://github.com/kubernetes-sigs/kind) however
 bear in mind that most of the benchmarks are around memory allocations, so it's advised to perform tests on at least 16GB machine.
 
-Before any benchmarks it is advised to start separate Prometheus instance which will measure results.
+2. Before any benchmarks it is advised to start separate Prometheus instance which will measure results.
 
-You can do on `default` namespace by:
+You can do on `default` namespace by running:
 
 `make gen && kubectl apply -f benchmarks/monitor-gen-manifests/monitor-roles.yaml -f benchmarks/monitor-gen-manifests/monitor.yaml`    
     
@@ -42,11 +42,13 @@ You can do on `default` namespace by:
  
 Prometheus is configured to monitor only the namespace configured in `namespace` argument. With few pods it should took at most 100MB of memory on average. 
  
-Forward port to see Prometheus UI: `kubectl port-forward svc/monitor 9090:9090`
+3. Forward port to see Prometheus UI: `kubectl port-forward svc/monitor 9090:9090`
  
-Optionally if you run on GKE, you might want to run your own `cadvisor` daemon set: 
+4. (Optionally) if you run e.g on GKE, you might want to run your own `cadvisor` daemon set: 
 
 `make gen && kubectl apply -f benchmarks/monitor-gen-manifests/cadvisor.yaml`  
+
+`kind` has advisor built in and default Prometheus is set to monitor it.
 
 ### Benchmarks
 
@@ -54,6 +56,7 @@ Optionally if you run on GKE, you might want to run your own `cadvisor` daemon s
     
 ## Potential next steps
 
-* Mores sophisticated  
+* Mores sophisticated features for `blockgen`.
+* More benchmarks.
 * Allow packing thanos and thanosbench binaries from certain commits into docker with ease (manual right now)
    * (?) framework for deploying manifests? As kubectl plugin?

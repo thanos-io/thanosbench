@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"path"
+	"time"
 
 	"github.com/bwplotka/mimic"
 	"github.com/bwplotka/mimic/abstractions/kubernetes/volumes"
@@ -60,17 +61,13 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 				ExternalLabels: map[model.LabelName]model.LabelValue{
 					"monitor": "0",
 				},
+				ScrapeInterval: model.Duration(15 * time.Second),
 			},
 			ScrapeConfigs: []*prometheus.ScrapeConfig{
 				{
 					JobName: "kubernetes-nodes-cadvisor",
 					ServiceDiscoveryConfig: sdconfig.ServiceDiscoveryConfig{
-						KubernetesSDConfigs: []*kubernetes.SDConfig{
-							{
-								Role:               kubernetes.RolePod,
-								NamespaceDiscovery: kubernetes.NamespaceDiscovery{Names: []string{namespace}},
-							},
-						},
+						KubernetesSDConfigs: []*kubernetes.SDConfig{{Role: kubernetes.RoleNode}},
 					},
 					RelabelConfigs: []*prometheus.RelabelConfig{
 						{

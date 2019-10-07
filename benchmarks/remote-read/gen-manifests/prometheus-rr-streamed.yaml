@@ -35,7 +35,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/prometheus/prometheus:v2.13.0-rc.0
+        image: quay.io/prometheus/prometheus:v2.13.0
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -143,7 +143,7 @@ spec:
                 "Replicate": 10000
               }
             ],
-            "Retention": 86400000000000,
+            "Retention": 36000000000000,
             "ScrapeInterval": 0
           }
         - --output-dir=/data-shared/prometheus

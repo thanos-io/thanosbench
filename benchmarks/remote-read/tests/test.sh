@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -8,8 +8,8 @@ cd ${DIR}/
 
 TARGET_URL=$1
 
-MIN_TDIFF="-6 hours"
-MAX_TDIFF="-4 hours"
+MIN_TDIFF="-10 hours"
+MAX_TDIFF="-2 hours"
 
 MIN_T=$(($(date +%s%N -d "${MIN_TDIFF}")/1000000))
 MAX_T=$(($(date +%s%N -d "${MAX_TDIFF}")/1000000))
@@ -31,12 +31,16 @@ ${TARGET_URL} thanos.Store/Series <<EOM | pv -b >/dev/null
   "minTime": ${MIN_T},
   "maxTime": ${MAX_T},
   "matchers": [{
-    "type": 1,
-    "name": "__name__",
-    "value": "unlikely"
+    "type": 2,
+    "name": "blockgen_fake_replica",
+    "value": "^\d{1,4}$"
   }]
 }
 EOM
+
+
+# Take half:  "value": "^[1-4]?\d{1,3}$"
+# Take all:   "value": "^\d{1,4}$"
 
 ###
 #  int64 min_time                 = 1;
