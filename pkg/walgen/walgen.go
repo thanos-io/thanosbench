@@ -1,4 +1,4 @@
-package blockgen
+package walgen
 
 import (
 	"encoding/json"

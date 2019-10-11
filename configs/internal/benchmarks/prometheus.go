@@ -17,7 +17,7 @@ import (
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/thanos-io/thanosbench/configs/abstractions/dockerimage"
-	"github.com/thanos-io/thanosbench/pkg/blockgen"
+	"github.com/thanos-io/thanosbench/pkg/walgen"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/rbac/v1"
@@ -244,7 +244,7 @@ type PrometheusOpts struct {
 	Resources corev1.ResourceRequirements
 
 	// If empty, no data autogeneration will be defined.
-	BlockgenConfig *blockgen.Config
+	BlockgenConfig *walgen.Config
 	BlockgenImg    dockerimage.Image
 
 	ThanosImg       dockerimage.Image

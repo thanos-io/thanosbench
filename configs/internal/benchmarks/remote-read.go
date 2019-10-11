@@ -7,7 +7,7 @@ import (
 	"github.com/bwplotka/mimic/providers/prometheus"
 	"github.com/prometheus/common/model"
 	"github.com/thanos-io/thanosbench/configs/abstractions/dockerimage"
-	"github.com/thanos-io/thanosbench/pkg/blockgen"
+	"github.com/thanos-io/thanosbench/pkg/walgen"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -30,15 +30,15 @@ func GenRemoteReadBenchPrometheus(gen *mimic.Generator, name string, namespace s
 		},
 		BlockgenImg: dockerimage.Image{Organization: "quay.io/thanos", Project: "thanosbench", Version: "docker-2019-10-04-19e823a"},
 		// Generate 10k series of type gauge on start.
-		BlockgenConfig: &blockgen.Config{
-			InputSeries: []blockgen.Series{
+		BlockgenConfig: &walgen.Config{
+			InputSeries: []walgen.Series{
 				{
 					Type:      "gauge",
 					Jitter:    20,
 					Max:       200000000,
 					Min:       100000000,
 					Replicate: 10000,
-					Result: blockgen.QueryData{
+					Result: walgen.QueryData{
 						Result: model.Vector{
 							{
 								Metric: map[model.LabelName]model.LabelValue{
