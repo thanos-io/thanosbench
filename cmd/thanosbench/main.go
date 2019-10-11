@@ -43,7 +43,7 @@ func main() {
 		Default(logFormatLogfmt).Enum(logFormatLogfmt, logFormatJson)
 
 	cmds := map[string]setupFunc{}
-	registerBlockgen(cmds, app)
+	registerWalgen(cmds, app)
 	// TODO(bwplotka): Add command to sync to object storage (?)
 
 	cmd, err := app.Parse(os.Args[1:])
