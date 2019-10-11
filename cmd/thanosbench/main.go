@@ -44,6 +44,7 @@ func main() {
 
 	cmds := map[string]setupFunc{}
 	registerWalgen(cmds, app)
+	registerBlockgen(cmds, app)
 	// TODO(bwplotka): Add command to sync to object storage (?)
 
 	cmd, err := app.Parse(os.Args[1:])
