@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-kit/kit/log"
+
 	"github.com/pkg/errors"
 )
 
@@ -55,7 +57,7 @@ func runGenerator() error {
 	generator := NewGeneratorWithConfig(generatorConfig)
 
 	// Create block writer to write to dir
-	blockWriter, err := NewBlockWriter(dir)
+	blockWriter, err := NewBlockWriter(log.NewNopLogger(), dir)
 	if err != nil {
 		return err
 	}

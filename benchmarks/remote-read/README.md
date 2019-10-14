@@ -6,6 +6,7 @@ This definition contains Prometheus statefulsets definitions set up to test remo
 
 ## Requirements
 
+* See [README.md](/README.md#Prerequisites)
 * [grpcurl](https://github.com/fullstorydev/grpcurl)
 * [pv](https://linux.die.net/man/1/pv)
 

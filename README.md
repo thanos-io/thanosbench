@@ -35,7 +35,7 @@ bear in mind that most of the benchmarks are around memory allocations, so it's 
 
 You can do on `default` namespace by running:
 
-`make gen && kubectl apply -f benchmarks/monitor-gen-manifests/monitor-roles.yaml -f benchmarks/monitor-gen-manifests/monitor.yaml`    
+`make gen && kubectl apply -f benchmarks/monitor/gen-manifests`    
     
  For any adjustment, edit [configs/main.go](https://github.com/thanos-io/thanosbench/blob/db8874ab23f480f33cdb4ac4eeec57562f566dd8/configs/main.go#L25) or related template. 
  `make gen` will generate the YAMLs.
@@ -46,7 +46,7 @@ Prometheus is configured to monitor only the namespace configured in `namespace`
  
 4. (Optionally) if you run e.g on GKE, you might want to run your own `cadvisor` daemon set: 
 
-`make gen && kubectl apply -f benchmarks/monitor-gen-manifests/cadvisor.yaml`  
+`make gen && kubectl apply -f benchmarks/cadvisor/gen-manifests/cadvisor.yaml`  
 
 `kind` has advisor built in and default Prometheus is set to monitor it.
 

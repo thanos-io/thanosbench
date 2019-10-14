@@ -20,10 +20,9 @@ func main() {
 	defer generator.Generate()
 
 	{
-		generator := generator.With("monitor-gen-manifests")
-		// Generate resources for common monitor for our benchmarks: Minimal Prometheus.
-		bench.GenMonitor(generator, namespace)
-		bench.GenCadvisor(generator, namespace)
+		// Resources for monitor observing benchmarks/tests.
+		bench.GenMonitor(generator.With("monitor", "gen-manifests"), namespace)
+		bench.GenCadvisor(generator.With("cadvisor", "gen-manifests"), namespace)
 	}
 
 	// Generate resources for various benchmarks.
