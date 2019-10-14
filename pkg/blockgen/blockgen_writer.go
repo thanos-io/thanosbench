@@ -2,7 +2,6 @@ package blockgen
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -37,9 +36,7 @@ import (
 // Note that the writer will not check if the target directory exists or
 // contains anything at all. It is the caller's responsibility to
 // ensure that the resulting blocks do not overlap etc.
-func NewBlockWriter(dir string) (Writer, error) {
-	logger := log.NewLogfmtLogger(os.Stderr)
-
+func NewBlockWriter(logger log.Logger, dir string) (Writer, error) {
 	res := &blockWriter{
 		logger: logger,
 		dir:    dir,
