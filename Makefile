@@ -142,6 +142,13 @@ lint: check-git $(GOLANGCILINT) $(MISSPELL)
 	@echo ">> detecting misspells"
 	@find . -type f | grep -v vendor/ | grep -vE '\./\..*' | xargs $(MISSPELL) -error
 
+# checks Go code comments if they have trailing period (excludes protobuffers and vendor files).
+# Comments with more than 3 spaces at beginning are omitted from the check, example: '//    - foo'.
+.PHONY: check-comments
+check-comments:
+	@printf ">> checking Go comments trailing periods\n\n\n"
+	@./scripts/build-check-comments.sh
+
 .PHONY: test
 test:
 	@echo ">> running tests"
