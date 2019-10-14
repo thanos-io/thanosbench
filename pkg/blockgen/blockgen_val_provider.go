@@ -86,6 +86,6 @@ func (v *valAdapter) Val() float64 {
 }
 
 func (v *valAdapter) Labels() labels.Labels {
-	// simple cast, assume labels are sorted already
+	// simple cast, assume labels are sorted already.
 	return labels.Labels(v.l)
 }

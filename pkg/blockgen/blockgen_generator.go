@@ -94,11 +94,11 @@ func (g *generator) Generate(writer Writer, valGenerators ...ValProvider) error 
 		return errors.New("retention must be multiples of flushInterval")
 	}
 
-	// write stuff to TSDB from oldest to newest
+	// write to TSDB from oldest to newest.
 	maxt := c.StartTime
 	mint := maxt.Add(-1 * c.Retention)
 
-	// keep hold of last flush time so we flush at regular intervals
+	// keep hold of last flush time so we flush at regular intervals.
 	elapsed := time.Duration(0)
 
 	for t := mint; !t.After(maxt); t = t.Add(c.SampleInterval) {
@@ -127,7 +127,7 @@ func (g *generator) Generate(writer Writer, valGenerators ...ValProvider) error 
 		}
 	}
 
-	// NOTE: no defer write.Flush on purpose
+	// NOTE: no defer write.Flush on purpose.
 	if err := writer.Flush(); err != nil {
 		return errors.Wrap(err, "last writer.Flush")
 	}

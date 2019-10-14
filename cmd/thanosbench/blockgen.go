@@ -46,7 +46,7 @@ type blockgenProfile struct {
 	valConfig blockgen.ValProviderConfig
 }
 
-// Hacky hacky script to generate TSDB
+// registerBlockgen registers blockgen CLI command.
 func registerBlockgen(m map[string]setupFunc, app *kingpin.Application) {
 	cmd := app.Command("blockgen", "Generates Prometheus TSDB blocks.")
 
@@ -73,7 +73,7 @@ func registerBlockgen(m map[string]setupFunc, app *kingpin.Application) {
 func execBlockgenProfile(logger log.Logger, p blockgenProfile) error {
 	level.Info(logger).Log("msg", "running profile", "name", p.name)
 
-	// remove dir if asked to do so
+	// remove dir if asked to do so.
 	if p.deleteDir {
 		level.Info(logger).Log("msg", "deleting dir", "dir", p.outDir)
 		if err := os.RemoveAll(p.outDir); err != nil {
