@@ -26,7 +26,7 @@ type Config struct {
 }
 
 type Series struct {
-	Type           string // gauge, counter (if counter we treat below as rate aim)
+	Type           string // gauge, counter (if counter we treat below as rate aim).
 	Jitter         float64
 	ChangeInterval string
 	Max            float64

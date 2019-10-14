@@ -81,9 +81,9 @@ func (w *blockWriter) Write(t time.Time, v Val) error {
 // happens. After flush completes, more writes can continue.
 func (w *blockWriter) Flush() error {
 	// Flush should:
-	//  - write head to disk
-	//  - close head
-	//  - open new head and appender
+	//  - write head to disk.
+	//  - close head.
+	//  - open new head and appender.
 	if err := w.writeHeadToDisk(); err != nil {
 		return errors.Wrap(err, "writeHeadToDisk")
 	}
@@ -111,8 +111,8 @@ func (w *blockWriter) initHeadAndAppender() error {
 
 		// Registerer and WAL can be nil as we don't use them.
 		// Not declaring to avoid dependency on github.com/prometheus/client_golang
-		// var r prometheus.Registerer = nil
-		// var w *wal.WAL = nil
+		//    var r prometheus.Registerer = nil
+		//    var w *wal.WAL = nil
 
 		h, err := tsdb.NewHead(nil /*Registerer*/, logger, nil /*WAL*/, chunkRange)
 		if err != nil {

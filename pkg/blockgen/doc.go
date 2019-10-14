@@ -5,14 +5,13 @@
 //
 // Quick start:
 //
+//    // Create random value provider
+//    valProvider := NewValProvider(valProviderConfig)
 //
-//	// Create random value provider
-//	valProvider := NewValProvider(valProviderConfig)
+//    // Create block writer to write to dir
+//    blockWriter, _ := NewBlockWriter(logger, dir)
 //
-//	// Create block writer to write to dir
-//	blockWriter, _ := NewBlockWriter(logger, dir)
-//
-//	// Specify how much data to generate and go
-// 	generator := NewGenerator(4 * time.Hour)
-//	generator.Generate(blockWriter, valProvider)
+//    // Specify how much data to generate and go
+//    generator := NewGenerator(4 * time.Hour)
+//    generator.Generate(blockWriter, valProvider)
 package blockgen

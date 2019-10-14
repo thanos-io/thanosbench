@@ -12,17 +12,15 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Test_Everything is a simple end-to-end test.
 func Test_Everything(t *testing.T) {
 	if err := runGenerator(); err != nil {
-		t.Errorf("Failure: %v", err)
+		t.Errorf("Want no error. Got: %v", err)
 	}
 }
 
-// A really noddy quick test. Not sure it's even a good
-// idea to have it.
 func runGenerator() error {
-	// set this to false to retain the output dir
-	// for any manual examination etc.
+	// set this to false to retain the output dir for any manual examination etc.
 	removeDir := true
 
 	dir, err := ioutil.TempDir("", "thanos-data-test")
@@ -30,10 +28,10 @@ func runGenerator() error {
 		return errors.Wrap(err, "create temp dir")
 	}
 
-	// delete temp dir if required
+	// delete temp dir if required.
 	defer func() {
 		if removeDir {
-			// ignore errors
+			// ignore errors.
 			os.RemoveAll(dir)
 		} else {
 			fmt.Fprintf(os.Stderr, "\n")
@@ -50,19 +48,19 @@ func runGenerator() error {
 
 	valProvider := NewValProvider(valProviderConfig)
 
-	// Custom generator config to make it faster :)
+	// Custom generator config to make it faster.
 	generatorConfig := DefaultGeneratorConfig(2 * time.Minute)
 	generatorConfig.SampleInterval = 15 * time.Second
 	generatorConfig.FlushInterval = 2 * time.Minute
 	generator := NewGeneratorWithConfig(generatorConfig)
 
-	// Create block writer to write to dir
+	// Create block writer to write to dir.
 	blockWriter, err := NewBlockWriter(log.NewNopLogger(), dir)
 	if err != nil {
 		return err
 	}
 
-	// Go and hope for the best :)
+	// Go and hope for the best.
 	if err := generator.Generate(blockWriter, valProvider); err != nil {
 		return err
 	}
