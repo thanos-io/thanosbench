@@ -1,94 +1,87 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/thanos-io/thanos/pkg/block"
+
+	"github.com/thanos-io/thanos/pkg/extflag"
+	"github.com/thanos-io/thanos/pkg/objstore"
+	"github.com/thanos-io/thanos/pkg/objstore/client"
 
 	"github.com/go-kit/kit/log/level"
 
 	"github.com/go-kit/kit/log"
 	"github.com/oklog/run"
-	"github.com/pkg/errors"
 	"github.com/thanos-io/thanosbench/pkg/blockgen"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-const (
-	defaultProfileName = "zzz"
-)
-
-// blockgenProfiles is Hard-coded list of profiles for now.
-// Add your own if needed, will make it work nicer later.
-var blockgenProfiles = map[string]blockgenProfile{
-	defaultProfileName: {
-		name:      defaultProfileName,
-		outDir:    os.ExpandEnv("${HOME}/zzz-prom-data/zzz"),
-		deleteDir: true,
-		genConfig: blockgen.GeneratorConfig{
-			StartTime:      time.Date(2019, time.September, 30, 0, 0, 0, 0, time.Local),
-			SampleInterval: 15 * time.Second,
-			FlushInterval:  2 * time.Hour,
-			Retention:      10 * time.Hour,
-		},
-		valConfig: blockgen.ValProviderConfig{
-			MetricCount: 200,
-			TargetCount: 100,
-		},
-	},
-}
-
-type blockgenProfile struct {
-	name      string
-	outDir    string
-	deleteDir bool
-	genConfig blockgen.GeneratorConfig
-	valConfig blockgen.ValProviderConfig
-}
-
 // registerBlockgen registers blockgen CLI command.
 func registerBlockgen(m map[string]setupFunc, app *kingpin.Application) {
-	cmd := app.Command("blockgen", "Generates Prometheus TSDB blocks.")
-
-	profileName := cmd.Flag("profile.name", "The name of the profile to use.").Required().String()
+	cmd := app.Command("blockgen", "Generates Prometheus/Thanos TSDB blocks. Optionally ships blocks to the object storage.")
+	config := extflag.RegisterPathOrContent(cmd, "config", "YAML configuration for block generating config.", true)
+	outputDir := cmd.Flag("output.dir", "Output directory for generated data.").Required().String()
+	objStoreConfig := extflag.RegisterPathOrContent(cmd, "output.objstore.config", "YAML file that contains object store configuration if you want to upload output to the object storage. See format details: https://thanos.io/storage.md/#configuration", false)
+	removeAfterUpload := cmd.Flag("output.objstore.remove-local", "If true, blockgen after upload will remove local block").Default("false").Bool()
 
 	m["blockgen"] = func(g *run.Group, logger log.Logger) error {
+		ctx, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {
-			profile, found := blockgenProfiles[*profileName]
-			if !found {
-				return fmt.Errorf("profile with name '%s' not found", *profileName)
+			configContent, err := config.Content()
+			if err != nil {
+				return err
 			}
 
-			if err := execBlockgenProfile(logger, profile); err != nil {
-				return errors.Wrap(err, "execBlockgenProfile")
+			config, err := blockgen.LoadConfig(configContent)
+			if err != nil {
+				return err
 			}
 
-			level.Info(logger).Log("msg", "data generated", "dir", profile.outDir)
-			return nil
-		}, func(error) {})
+			level.Info(logger).Log("msg", "loaded config", "config", fmt.Sprintf("%#v", config))
+			objstoreConfig, err := objStoreConfig.Content()
+			if err != nil {
+				return err
+			}
+
+			var syncer blockgen.Syncer = blockgen.NoopSyncer{}
+			if len(objstoreConfig) > 0 {
+				bkt, err := client.NewBucket(logger, objstoreConfig, nil, "blockgen")
+				if err != nil {
+					return err
+				}
+				level.Info(logger).Log("msg", "uploading enabled", "bucket", bkt.Name())
+				syncer = &bucketSyncer{logger: logger, bkt: bkt, remove: *removeAfterUpload}
+			} else {
+				level.Info(logger).Log("msg", "no upload config found; uploading disabled")
+			}
+
+			return blockgen.Generate(ctx, logger, *outputDir, syncer, config)
+		}, func(error) { cancel() })
 		return nil
 	}
 }
 
-func execBlockgenProfile(logger log.Logger, p blockgenProfile) error {
-	level.Info(logger).Log("msg", "running profile", "name", p.name)
+type bucketSyncer struct {
+	logger log.Logger
+	bkt    objstore.Bucket
+	remove bool
+}
 
-	// remove dir if asked to do so.
-	if p.deleteDir {
-		level.Info(logger).Log("msg", "deleting dir", "dir", p.outDir)
-		if err := os.RemoveAll(p.outDir); err != nil {
-			return errors.Wrapf(err, "delete dir %s", p.outDir)
+func (s *bucketSyncer) Sync(ctx context.Context, bdir string) error {
+	start := time.Now()
+	if err := block.Upload(ctx, s.logger, s.bkt, bdir); err != nil {
+		return err
+	}
+	level.Info(s.logger).Log("msg", "uploaded block to bucket", "bdir", bdir, "elapsed", time.Since(start))
+	if s.remove {
+		if err := os.RemoveAll(bdir); err != nil {
+			return err
 		}
+		level.Info(s.logger).Log("msg", "removed local block", "bdir", bdir)
 	}
-
-	writer, err := blockgen.NewBlockWriter(logger, p.outDir)
-	if err != nil {
-		return errors.Wrap(err, "blockgen.NewBlockWriter")
-	}
-
-	valProvider := blockgen.NewValProvider(p.valConfig)
-	generator := blockgen.NewGeneratorWithConfig(p.genConfig)
-
-	level.Info(logger).Log("msg", "writing to dir", "dir", p.outDir)
-	return generator.Generate(writer, valProvider)
+	return nil
 }
