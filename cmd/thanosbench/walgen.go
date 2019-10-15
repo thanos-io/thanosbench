@@ -12,9 +12,9 @@ import (
 
 func registerWalgen(m map[string]setupFunc, app *kingpin.Application) {
 	cmd := app.Command("walgen", "Generates TSDB data into WAL files.")
-	config := extflag.RegisterPathOrContent(cmd, "config", "JSON file for series config", true)
+	config := extflag.RegisterPathOrContent(cmd, "config", "YAML for series config", true)
 
-	outputDir := cmd.Flag("output-dir", "Output directory for generated TSDB data.").Required().String()
+	outputDir := cmd.Flag("output.dir", "Output directory for generated TSDB data.").Required().String()
 
 	// TODO(bwplotka): Consider mode in which it generates the data only if empty work dir.
 	m["walgen"] = func(g *run.Group, logger log.Logger) error {

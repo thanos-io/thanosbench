@@ -3,6 +3,8 @@ package bench
 import (
 	"time"
 
+	"github.com/thanos-io/thanosbench/pkg/seriesgen"
+
 	"github.com/bwplotka/mimic"
 	"github.com/bwplotka/mimic/providers/prometheus"
 	"github.com/prometheus/common/model"
@@ -33,10 +35,14 @@ func GenRemoteReadBenchPrometheus(gen *mimic.Generator, name string, namespace s
 		BlockgenConfig: &walgen.Config{
 			InputSeries: []walgen.Series{
 				{
-					Type:      "gauge",
-					Jitter:    20,
-					Max:       200000000,
-					Min:       100000000,
+					Type: "gauge",
+					Characteristics: seriesgen.Characteristics{
+						Jitter:         20,
+						Max:            200000000,
+						Min:            100000000,
+						ScrapeInterval: 15 * time.Second,
+						ChangeInterval: 1 * time.Hour,
+					},
 					Replicate: 10000,
 					Result: walgen.QueryData{
 						Result: model.Vector{

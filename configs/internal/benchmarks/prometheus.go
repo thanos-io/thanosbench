@@ -254,6 +254,7 @@ type PrometheusOpts struct {
 	ServiceAccountName string
 }
 
+// NOTE: No persistent volume on purpose to simplify testing. It is must-have!
 func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 	const (
 		replicas = 1
