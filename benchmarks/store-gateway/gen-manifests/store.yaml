@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  creationTimestamp: null
+  labels:
+    app: store
+  name: store
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: store
+  serviceName: store
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: store
+        store-test-api: "true"
+    spec:
+      containers:
+      - args:
+        - store
+        - --log.level=debug
+        - --debug.name=$(POD_NAME)
+        - --objstore.config-file=/s3/config/s3.yaml
+        - --index-cache-size=250MB
+        - --chunk-pool-size=2GB
+        - --http-address=0.0.0.0:19190
+        - --grpc-address=0.0.0.0:19090
+        - --data-dir=/data
+        command:
+        - thanos
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: quay.io/thanos/thanos:v0.8.1
+        imagePullPolicy: Always
+        name: thanos
+        ports:
+        - containerPort: 19190
+          name: http
+        - containerPort: 19090
+          name: grpc
+        readinessProbe:
+          httpGet:
+            path: metrics
+            port: 19190
+        resources:
+          limits:
+            cpu: "1"
+            memory: 8Gi
+          requests:
+            cpu: "1"
+            memory: 8Gi
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 1000
+        volumeMounts:
+        - mountPath: /data
+          name: store
+        - mountPath: /s3/config
+          name: s3
+          readOnly: true
+      volumes:
+      - name: store
+      - name: s3
+        secret:
+          secretName: s3
+  updateStrategy: {}
+status:
+  replicas: 0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: store
+  name: store
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 19190
+    targetPort: 19190
+  - name: grpc
+    port: 19090
+    targetPort: 19090
+  selector:
+    app: store
+  type: ClusterIP
+status:
+  loadBalancer: {}
