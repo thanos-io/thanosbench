@@ -88,6 +88,8 @@ func (w *BlockWriter) Flush() (ulid.ULID, error) {
 func (w *BlockWriter) initHeadAndAppender() error {
 	logger := w.logger
 
+	runtime.GC()
+
 	// Keep Registerer and WAL nil as we don't use them.
 	// Not declaring to avoid dependency on github.com/prometheus/client_golang
 	//    var r prometheus.Registerer = nil
@@ -134,8 +136,6 @@ func (w *BlockWriter) writeHeadToDisk() (ulid.ULID, error) {
 	if err != nil {
 		return ulid.ULID{}, errors.Wrap(err, "create leveled compactor")
 	}
-
-	defer runtime.GC()
 
 	return compactor.Write(w.dir, w.head, mint, maxt+1, nil)
 }

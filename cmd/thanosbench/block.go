@@ -75,6 +75,7 @@ func registerBlockGen(m map[string]setupFunc, root *kingpin.CmdClause) {
 				}
 				n++
 				level.Info(logger).Log("msg", "generated block", "path", path.Join(*outputDir, id.String()), "count", n)
+				runtime.GC()
 			}
 			return ctx.Err()
 		}, func(error) { cancel() })
@@ -106,7 +107,7 @@ func registerBlockPlan(m map[string]setupFunc, root *kingpin.CmdClause) {
 
 Example plan with generation:
 
-./thanosbench block plan -p realistic-k8s-1w-small --labels 'cluster="one"' --max-time 2019-10-18T00:00:00Z | ./thanosbench block gen --output.dir ./genblocks --workers 20`)
+./thanosbench block plan -p <profile> --labels 'cluster="one"' --max-time 2019-10-18T00:00:00Z | ./thanosbench block gen --output.dir ./genblocks --workers 20`)
 	profile := cmd.Flag("profile", fmt.Sprintf("Name of the harcoded profile to use")).Required().Short('p').Enum(blockgen.Profiles.Keys()...)
 	maxTime := model.TimeOrDuration(cmd.Flag("max-time", "If empty current time - 30m (usual consistency delay) is used.").Default("30m"))
 	extLset := cmd.Flag("labels", "External labels for block stream (repeated).").PlaceHolder("<name>=\"<value>\"").Required().Strings()
