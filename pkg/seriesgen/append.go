@@ -9,11 +9,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func Append(ctx context.Context, workersNum int, appendable tsdb.Appendable, series SeriesSet) error {
+func Append(ctx context.Context, goroutines int, appendable tsdb.Appendable, series SeriesSet) error {
 	g, gctx := errgroup.WithContext(ctx)
 
 	workBuffer := make(chan Series)
-	for i := 0; i < workersNum; i++ {
+	for i := 0; i < goroutines; i++ {
 		app := appendable.Appender()
 		g.Go(func() error {
 			var (

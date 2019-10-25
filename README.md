@@ -7,10 +7,42 @@
 
 Kubernetes Playground for Thanos testing &amp; benchmarking purposes 
 
-## Available tools
+## CLI
+
+This repo adds additional tooling for benchmarks. See possible subcommands here:
 
 See `make build && ./thanosbench --help` for available commands.
- 
+
+```
+usage: thanosbench [<flags>] <command> [<args> ...]
+
+Benchmarking tools for Thanos
+
+Flags:
+  -h, --help               Show context-sensitive help (also try --help-long and --help-man).
+      --version            Show application version.
+      --log.level=info     Log filtering level.
+      --log.format=logfmt  Log format to use.
+
+Commands:
+  help [<command>...]
+    Show help.
+
+  walgen --output.dir=OUTPUT.DIR [<flags>]
+    Generates TSDB data into WAL files.
+
+  block gen --output.dir=OUTPUT.DIR [<flags>]
+    Generates Prometheus/Thanos TSDB blocks from input. Expects []blockgen.BlockSpeck in YAML format as input.
+
+  block plan --profile=PROFILE --labels=<name>="<value>" [<flags>]
+    Plan generates blocks specs used by blockgen command to build blocks.
+
+    Example plan with generation:
+
+    ./thanosbench block plan -p realistic-k8s-1w-small --labels 'cluster="one"' --max-time 2019-10-18T00:00:00Z | ./thanosbench block gen --output.dir ./genblocks --workers 20
+
+```
+
 ## Repo structure:
 
 * `cmds/thanosbench` - single binary for all tools.
@@ -56,7 +88,7 @@ Prometheus is configured to monitor only the namespace configured in `namespace`
     
 ## Potential next steps
 
-* Mores sophisticated features for `blockgen`.
+* Mores sophisticated profiles for `block gen`.
 * More benchmarks.
 * Allow packing thanos and thanosbench binaries from certain commits into docker with ease (manual right now)
    * (?) framework for deploying manifests? As kubectl plugin?

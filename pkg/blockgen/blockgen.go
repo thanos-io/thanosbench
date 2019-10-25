@@ -5,17 +5,14 @@ import (
 	"fmt"
 	"math/rand"
 	"path"
-	"strings"
 	"time"
+	"unsafe"
 
-	"gopkg.in/yaml.v2"
+	"github.com/pkg/errors"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 	"github.com/oklog/ulid"
-	"github.com/pkg/errors"
 	promlabels "github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/pkg/timestamp"
 	"github.com/prometheus/prometheus/tsdb"
 	"github.com/prometheus/prometheus/tsdb/labels"
 	"github.com/thanos-io/thanos/pkg/block/metadata"
@@ -31,26 +28,10 @@ type Writer interface {
 	Flush() (ulid.ULID, error)
 }
 
-type GeneratorConfig struct {
-	RangeBasedBlocks []RangesBasedConfig `yaml:"rangeBasedBlocks"`
-	Blocks           []BlockConfig       `yaml:"blocks"`
-}
-
-type RangesBasedConfig struct {
-	// StartTime is the time from which to generate metrics. The metrics are not strictly generated from this date (!).
-	// It aligned to the 2h range as on Prometheus.
-	StartTime time.Time `yaml:"startTime"`
-	// From newest to oldest. Retention of the metric will be sum of all blocks.
-	Blocks []time.Duration `yaml:"blocks"`
-	// Series across all blocks.
-	Series         []SeriesConfig    `yaml:"series"`
-	ExternalLabels promlabels.Labels `yaml:"externalLabels"`
-}
-
 // TODO(bwplotka): Add option to create downsampled blocks.
-type BlockConfig struct {
+type BlockSpec struct {
 	metadata.Meta
-	Series []SeriesConfig
+	Series []SeriesSpec
 }
 
 type GenType string
@@ -75,139 +56,55 @@ func (g GenType) Create(random *rand.Rand, mint, maxt int64, opts seriesgen.Char
 }
 
 func toLabels(lset promlabels.Labels) labels.Labels {
-	// TODO(bwplotka): Make it efficient or write marshsaller.
-	return labels.FromMap(lset.Map())
+	return *(*labels.Labels)(unsafe.Pointer(&lset))
 }
 
-// TODO(bwplotka): Allow partial block series.
-type SeriesConfig struct {
+type SeriesSpec struct {
 	Labels promlabels.Labels `yaml:"labels"`
+
 	// Targets multiples labels by given targets.
 	Targets int `yaml:"targets"`
 
-	Type                      GenType `yaml:"type"`
+	Type GenType `yaml:"type"`
+
+	MinTime, MaxTime int64
+
 	seriesgen.Characteristics `yaml:",inline"`
-}
-
-func LoadConfig(cfg []byte) (GeneratorConfig, error) {
-	g := GeneratorConfig{}
-	if err := yaml.UnmarshalStrict(cfg, &g); err != nil {
-		return GeneratorConfig{}, err
-	}
-
-	return g, nil
-}
-
-type NoopSyncer struct{}
-
-func (NoopSyncer) Sync(ctx context.Context, bdir string) error { return nil }
-
-type Syncer interface {
-	Sync(ctx context.Context, bdir string) error
-}
-
-func Generate(ctx context.Context, logger log.Logger, dir string, workersNum int, syncer Syncer, cfg GeneratorConfig) error {
-	var toGenerate []BlockConfig
-	for _, c := range cfg.RangeBasedBlocks {
-		if len(c.Blocks) == 0 {
-			return errors.New("empty block ranges")
-		}
-
-		if c.StartTime.Equal(time.Unix(0, 0)) {
-			c.StartTime = time.Now()
-		}
-
-		maxt := rangeForTimestamp(timestamp.FromTime(c.StartTime), durToMilis(2*time.Hour))
-		for _, r := range c.Blocks {
-			mint := maxt - durToMilis(r)
-			toGenerate = append(toGenerate, BlockConfig{
-				Meta: metadata.Meta{
-					BlockMeta: tsdb.BlockMeta{
-						MaxTime: maxt,
-						MinTime: mint,
-						// TODO(bwplotka): Allow customization.
-						Compaction: tsdb.BlockMetaCompaction{
-							Level: 0,
-						},
-					},
-					Thanos: metadata.Thanos{
-						Labels: c.ExternalLabels.Map(),
-						Downsample: metadata.ThanosDownsample{
-							Resolution: 0,
-						},
-						Source: "blockgen",
-					},
-				},
-				Series: c.Series,
-			})
-			maxt = mint
-		}
-	}
-
-	toGenerate = append(toGenerate, cfg.Blocks...)
-
-	level.Info(logger).Log("msg", "scheduled blocks to generate", "workers", workersNum, "blocks", printBlocks(toGenerate...), "dir", dir)
-
-	for _, b := range toGenerate {
-		level.Info(logger).Log("msg", "generating block", "blocks", printBlocks(b), "dir", dir)
-
-		start := time.Now()
-		id, err := generateBlock(ctx, logger, workersNum, dir, b)
-		if err != nil {
-			return errors.Wrap(err, "generate block")
-		}
-		bdir := path.Join(dir, id.String())
-		meta, err := metadata.Read(bdir)
-		if err != nil {
-			return errors.Wrap(err, "meta read")
-		}
-		meta.Thanos = b.Thanos
-		if err := metadata.Write(logger, bdir, meta); err != nil {
-			return errors.Wrap(err, "meta write")
-		}
-		level.Info(logger).Log("msg", "generated block", "id", id.String(), "blocks", printBlocks(b), "dir", dir, "elapsed", time.Since(start))
-
-		if err := syncer.Sync(ctx, bdir); err != nil {
-			return errors.Wrap(err, "sync")
-		}
-	}
-	return nil
-}
-
-func rangeForTimestamp(t int64, width int64) (maxt int64) {
-	return (t/width)*width + width
-}
-
-func printBlocks(bts ...BlockConfig) string {
-	var msg []string
-	for _, b := range bts {
-		msg = append(msg, fmt.Sprintf("[%d - %d](%s) ", b.MinTime, b.MaxTime, milisToDur(b.MaxTime-b.MinTime).String()))
-	}
-	return strings.Join(msg, ",")
 }
 
 func durToMilis(t time.Duration) int64 {
 	return int64(t.Seconds() * 1000)
 }
 
-func milisToDur(t int64) time.Duration {
-	return time.Duration(t * int64(time.Millisecond))
-}
-
-func generateBlock(ctx context.Context, logger log.Logger, workersNum int, dir string, block BlockConfig) (ulid.ULID, error) {
+// Generate creates a block from given spec using given go routines in a given directory.
+func Generate(ctx context.Context, logger log.Logger, goroutines int, dir string, block BlockSpec) (ulid.ULID, error) {
 	w, err := NewTSDBBlockWriter(logger, dir)
 	if err != nil {
 		return ulid.ULID{}, err
 	}
 	set := &blockSeriesSet{config: block}
-	if err := seriesgen.Append(ctx, workersNum, w, set); err != nil {
+	if err := seriesgen.Append(ctx, goroutines, w, set); err != nil {
 		return ulid.ULID{}, errors.Wrap(err, "append")
 	}
-	return w.Flush()
+	id, err := w.Flush()
+	if err != nil {
+		return ulid.ULID{}, errors.Wrap(err, "flush")
+	}
+
+	bdir := path.Join(dir, id.String())
+	meta, err := metadata.Read(bdir)
+	if err != nil {
+		return ulid.ULID{}, errors.Wrap(err, "meta read")
+	}
+	meta.Thanos = block.Thanos
+	if err := metadata.Write(logger, bdir, meta); err != nil {
+		return ulid.ULID{}, errors.Wrap(err, "meta write")
+	}
+	return id, nil
 }
 
 type blockSeriesSet struct {
-	config BlockConfig
+	config BlockSpec
 	i      int
 	target int
 	err    error
@@ -234,8 +131,8 @@ func (s *blockSeriesSet) Next() bool {
 	// Stable random per series name.
 	iter, err := series.Type.Create(
 		rand.New(rand.NewSource(int64(lset.Hash()))),
-		s.config.MinTime,
-		s.config.MaxTime,
+		series.MinTime,
+		series.MaxTime,
 		series.Characteristics,
 	)
 	if err != nil {
