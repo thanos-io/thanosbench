@@ -5,13 +5,16 @@ require (
 	github.com/go-kit/kit v0.9.0
 	github.com/go-openapi/swag v0.19.4
 	github.com/oklog/run v1.0.0
+	github.com/oklog/ulid v1.3.1
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.7.0
 	github.com/prometheus/prometheus v1.8.2-0.20190913102521-8ab628b35467 // v1.8.2 is misleading as Prometheus does not have v2 module.
 	github.com/spf13/pflag v1.0.3 // indirect
-	github.com/thanos-io/thanos v0.7.1-0.20191003223108-18a6c537832e
+	github.com/thanos-io/thanos v0.8.1-0.20191015125029-5d107d1c3cdc
 	go.uber.org/automaxprocs v1.2.0
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190813020757-36bff7324fb7
 	k8s.io/apimachinery v0.0.0-20190809020650-423f5d784010
 )

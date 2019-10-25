@@ -44,7 +44,7 @@ func main() {
 
 	cmds := map[string]setupFunc{}
 	registerWalgen(cmds, app)
-	registerBlockgen(cmds, app)
+	registerBlock(cmds, app)
 	// TODO(bwplotka): Add command to sync to object storage (?).
 
 	cmd, err := app.Parse(os.Args[1:])
@@ -96,7 +96,7 @@ func main() {
 
 	var g run.Group
 	if err := cmds[cmd](&g, logger); err != nil {
-		level.Error(logger).Log("err", errors.Wrapf(err, "%s command failed", cmd))
+		level.Error(logger).Log("err", fmt.Sprintf("%v", errors.Wrapf(err, "%s command failed", cmd)))
 		os.Exit(1)
 	}
 
@@ -114,7 +114,9 @@ func main() {
 		level.Error(logger).Log("msg", "running command failed", "err", err)
 		os.Exit(1)
 	}
-	level.Info(logger).Log("msg", "exiting")
+	if cmd != "block plan" {
+		level.Info(logger).Log("msg", "exiting", "cmd", cmd)
+	}
 }
 
 func interrupt(logger log.Logger, cancel <-chan struct{}) error {
