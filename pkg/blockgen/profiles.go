@@ -28,7 +28,6 @@ var (
 	Profiles = ProfileMap{
 		// Let's say we have 100 applications, 50 metrics each. All rollout every 1h.
 		// This makes 2h block to have 15k series, 8h block 45k, 2d block to have 245k series.
-
 		"realistic-k8s-2d-small": realisticK8s([]time.Duration{
 			// Two days, from newest to oldest, in the same way Thanos compactor would do.
 			2 * time.Hour,
@@ -53,6 +52,20 @@ var (
 			48 * time.Hour,
 			2 * time.Hour,
 		}, 1*time.Hour, 100, 50),
+
+		"continuous-1w-small": continuous([]time.Duration{
+			// One week, from newest to oldest, in the same way Thanos compactor would do.
+			2 * time.Hour,
+			2 * time.Hour,
+			2 * time.Hour,
+			8 * time.Hour,
+			8 * time.Hour,
+			48 * time.Hour,
+			48 * time.Hour,
+			48 * time.Hour,
+			2 * time.Hour,
+			// 100,000 series per block.
+		}, 1000, 100),
 	}
 )
 
@@ -115,7 +128,7 @@ func realisticK8s(ranges []time.Duration, rolloutInterval time.Duration, apps in
 					s := common
 
 					s.Labels = labels.Labels{
-						{Name: "__name__", Value: fmt.Sprintf("metric%d", i)},
+						{Name: "__name__", Value: fmt.Sprintf("k8s_app_metric%d", i)},
 						{Name: "next_rollout_time", Value: timestamp.Time(lastRollout).String()},
 					}
 					s.MinTime = smint
@@ -128,6 +141,67 @@ func realisticK8s(ranges []time.Duration, rolloutInterval time.Duration, apps in
 				}
 
 				lastRollout -= durToMilis(rolloutInterval)
+			}
+
+			if err := blockEncoder(b); err != nil {
+				return err
+			}
+			maxt = mint
+		}
+		return nil
+	}
+}
+
+func continuous(ranges []time.Duration, apps int, metricsPerApp int) PlanFn {
+	return func(ctx context.Context, maxTime model.TimeOrDurationValue, extLset labels.Labels, blockEncoder func(BlockSpec) error) error {
+
+		// Align timestamps as Prometheus would do.
+		maxt := rangeForTimestamp(maxTime.PrometheusTimestamp(), durToMilis(2*time.Hour))
+
+		// All our series are gauges.
+		common := SeriesSpec{
+			Targets: apps,
+			Type:    Gauge,
+			Characteristics: seriesgen.Characteristics{
+				Max:            200000000,
+				Min:            10000000,
+				Jitter:         30000000,
+				ScrapeInterval: 15 * time.Second,
+				ChangeInterval: 1 * time.Hour,
+			},
+		}
+
+		for _, r := range ranges {
+			mint := maxt - durToMilis(r)
+
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
+			b := BlockSpec{
+				Meta: metadata.Meta{
+					BlockMeta: tsdb.BlockMeta{
+						MaxTime:    maxt,
+						MinTime:    mint,
+						Compaction: tsdb.BlockMetaCompaction{Level: 1},
+						Version:    1,
+					},
+					Thanos: metadata.Thanos{
+						Labels:     extLset.Map(),
+						Downsample: metadata.ThanosDownsample{Resolution: 0},
+						Source:     "blockgen",
+					},
+				},
+			}
+			for i := 0; i < metricsPerApp; i++ {
+				s := common
+
+				s.Labels = labels.Labels{
+					{Name: "__name__", Value: fmt.Sprintf("continuous_app_metric%d", i)},
+				}
+				s.MinTime = mint
+				s.MaxTime = maxt
+				b.Series = append(b.Series, s)
 			}
 
 			if err := blockEncoder(b); err != nil {
