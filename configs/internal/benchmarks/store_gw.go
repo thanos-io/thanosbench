@@ -106,30 +106,21 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Port: intstr.FromInt(httpPort),
-					Path: "metrics",
+					Path: "-/ready",
 				},
 			},
+			SuccessThreshold: 3,
 		},
-		// Move to readiness/health probing once we are on new release.
-		//ReadinessProbe: &corev1.Probe{
-		//	Handler: corev1.Handler{
-		//		HTTPGet: &corev1.HTTPGetAction{
-		//			Port: intstr.FromInt(httpPort),
-		//			Path: "-/ready",
-		//		},
-		//	},
-		//	SuccessThreshold: 3,
-		//},
-		//LivenessProbe: &corev1.Probe{
-		//	Handler: corev1.Handler{
-		//		HTTPGet: &corev1.HTTPGetAction{
-		//			Path: "/-/healthy",
-		//			Port: intstr.FromInt(9090),
-		//		},
-		//	},
-		//	InitialDelaySeconds: 30,
-		//	TimeoutSeconds:      30,
-		//},
+		LivenessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/-/healthy",
+					Port: intstr.FromInt(9090),
+				},
+			},
+			InitialDelaySeconds: 120,
+			TimeoutSeconds:      30,
+		},
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          "http",

@@ -36,13 +36,13 @@ func main() {
 		bench.GenRemoteReadBenchPrometheus(generator, "prometheus-rr-streamed", namespace, dockerimage.PublicPrometheus("v2.13.0"), dockerimage.PublicThanos("v0.7.0"))
 	}
 	{
-		generator := generator.With("store-gateway", "gen-manifests")
+		generator := generator.With("lts", "gen-manifests")
 
-		const storeAPILabelSelector = "store-test-api"
+		const storeAPILabelSelector = "lts-api"
 		bench.GenThanosStoreGateway(generator, bench.StoreGatewayOpts{
-			Name:      "store",
+			Name:      "store-base",
 			Namespace: namespace,
-			Img:       dockerimage.PublicThanos("v0.8.1"),
+			Img:       dockerimage.PublicThanos("master-2019-10-29-b7f3ac9e"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -53,9 +53,8 @@ func main() {
 					corev1.ResourceMemory: resource.MustParse("8Gi"),
 				},
 			},
-			IndexCacheBytes: "250MB",
+			IndexCacheBytes: "0MB",
 			ChunkCacheBytes: "2GB",
-
 			StoreAPILabelSelector: storeAPILabelSelector,
 
 			// You need secret for this.
@@ -75,9 +74,9 @@ func main() {
 			),
 		})
 		bench.GenThanosQuerier(generator, bench.QuerierOpts{
-			Name:      "query",
+			Name:      "query-base",
 			Namespace: namespace,
-			Img:       dockerimage.PublicThanos("v0.8.1"),
+			Img:       dockerimage.PublicThanos("master-2019-10-29-b7f3ac9e"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
