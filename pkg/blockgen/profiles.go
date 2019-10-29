@@ -64,8 +64,8 @@ var (
 			48 * time.Hour,
 			48 * time.Hour,
 			2 * time.Hour,
-			// 100,000 series per block.
-		}, 1000, 100),
+			// 10,000 series per block.
+		}, 100, 100),
 	}
 )
 
