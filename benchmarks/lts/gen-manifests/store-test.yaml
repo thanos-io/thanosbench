@@ -3,20 +3,20 @@ kind: StatefulSet
 metadata:
   creationTimestamp: null
   labels:
-    app: store-base
-  name: store-base
+    app: store-test
+  name: store-test
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: store-base
-  serviceName: store-base
+      app: store-test
+  serviceName: store-test
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: store-base
+        app: store-test
         lts-api: "true"
     spec:
       containers:
@@ -37,7 +37,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/thanos/thanos:master-2019-10-29-b7f3ac9e
+        image: quay.io/thanos/thanos:v0.7.0
         imagePullPolicy: Always
         name: thanos
         ports:
@@ -65,12 +65,12 @@ spec:
           runAsUser: 1000
         volumeMounts:
         - mountPath: /data
-          name: store-base
+          name: store-test
         - mountPath: /s3/config
           name: s3
           readOnly: true
       volumes:
-      - name: store-base
+      - name: store-test
       - name: s3
         secret:
           secretName: s3
@@ -83,8 +83,8 @@ kind: Service
 metadata:
   creationTimestamp: null
   labels:
-    app: store-base
-  name: store-base
+    app: store-test
+  name: store-test
   namespace: default
 spec:
   ports:
@@ -95,7 +95,7 @@ spec:
     port: 19090
     targetPort: 19090
   selector:
-    app: store-base
+    app: store-test
   type: ClusterIP
 status:
   loadBalancer: {}

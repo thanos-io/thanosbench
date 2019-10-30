@@ -46,7 +46,7 @@ func main() {
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
-					corev1.ResourceMemory: resource.MustParse("8Gi"),
+					corev1.ResourceMemory: resource.MustParse("2Gi"),
 				},
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -88,6 +88,40 @@ func main() {
 				},
 			},
 			StoreAPILabelSelector: storeAPILabelSelector,
+		})
+		bench.GenThanosStoreGateway(generator, bench.StoreGatewayOpts{
+			Name:      "store-test",
+			Namespace: namespace,
+			Img:       dockerimage.PublicThanos("v0.7.0"),
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("2Gi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("8Gi"),
+				},
+			},
+			IndexCacheBytes: "0MB",
+			ChunkCacheBytes: "2GB",
+			StoreAPILabelSelector: storeAPILabelSelector,
+
+			// You need secret for this.
+			/*
+				apiVersion: v1
+				kind: Secret
+				metadata:
+				  name: s3
+				data:
+				  s3.yaml: |
+				    <base64 config>
+			*/
+			ObjStoreSecret: secret.NewFile(
+				"s3.yaml",
+				"s3",
+				"/s3/config",
+			),
 		})
 	}
 }

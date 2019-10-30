@@ -2,6 +2,7 @@ package bench
 
 import (
 	"fmt"
+
 	"github.com/bwplotka/mimic"
 	"github.com/bwplotka/mimic/abstractions/kubernetes/volumes"
 	"github.com/bwplotka/mimic/encoding"
@@ -52,7 +53,7 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type:      corev1.ServiceTypeClusterIP,
+			Type: corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{
 				selectorName: opts.Name,
 			},
@@ -106,21 +107,25 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Port: intstr.FromInt(httpPort),
-					Path: "-/ready",
+					Path: "/-/ready",
 				},
 			},
-			SuccessThreshold: 3,
+			InitialDelaySeconds: 350,
+			SuccessThreshold:    3,
+			TimeoutSeconds:      10,
+			FailureThreshold:    3,
 		},
-		LivenessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/-/healthy",
-					Port: intstr.FromInt(9090),
-				},
-			},
-			InitialDelaySeconds: 120,
-			TimeoutSeconds:      30,
-		},
+		//LivenessProbe: &corev1.Probe{
+		//	Handler: corev1.Handler{
+		//		HTTPGet: &corev1.HTTPGetAction{
+		//			Path: "/-/healthy",
+		//			Port: intstr.FromInt(httpPort),
+		//		},
+		//	},
+		//	InitialDelaySeconds: 350,
+		//	TimeoutSeconds:      30,
+		//	FailureThreshold:    3,
+		//},
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          "http",
@@ -156,12 +161,12 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 			ServiceName: opts.Name,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: func() map[string]string{
+					Labels: func() map[string]string {
 						if opts.StoreAPILabelSelector == "" {
-							return map[string]string{ selectorName: opts.Name}
+							return map[string]string{selectorName: opts.Name}
 						}
 						return map[string]string{
-							selectorName: opts.Name,
+							selectorName:               opts.Name,
 							opts.StoreAPILabelSelector: "true",
 						}
 					}(),

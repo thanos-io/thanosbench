@@ -128,6 +128,7 @@ func realisticK8s(ranges []time.Duration, rolloutInterval time.Duration, apps in
 					s := common
 
 					s.Labels = labels.Labels{
+						// TODO(bwplotka): Use different label for metricPerApp cardinality and stable number.
 						{Name: "__name__", Value: fmt.Sprintf("k8s_app_metric%d", i)},
 						{Name: "next_rollout_time", Value: timestamp.Time(lastRollout).String()},
 					}
