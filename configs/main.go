@@ -42,7 +42,8 @@ func main() {
 		bench.GenThanosStoreGateway(generator, bench.StoreGatewayOpts{
 			Name:      "store-base",
 			Namespace: namespace,
-			Img:       dockerimage.PublicThanos("master-2019-10-29-b7f3ac9e"),
+			// Bisect.
+			Img:       dockerimage.PublicThanos("master-2019-09-03-f7a238fd"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -72,6 +73,7 @@ func main() {
 				"s3",
 				"/s3/config",
 			),
+			ReadinessPath: "/metrics",
 		})
 		bench.GenThanosQuerier(generator, bench.QuerierOpts{
 			Name:      "query-base",
@@ -92,7 +94,7 @@ func main() {
 		bench.GenThanosStoreGateway(generator, bench.StoreGatewayOpts{
 			Name:      "store-test",
 			Namespace: namespace,
-			Img:       dockerimage.PublicThanos("v0.7.0"),
+			Img:       dockerimage.PublicThanos("master-2019-09-07-cfacb10b"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -106,7 +108,6 @@ func main() {
 			IndexCacheBytes: "0MB",
 			ChunkCacheBytes: "2GB",
 			StoreAPILabelSelector: storeAPILabelSelector,
-
 			// You need secret for this.
 			/*
 				apiVersion: v1
@@ -122,6 +123,7 @@ func main() {
 				"s3",
 				"/s3/config",
 			),
+			ReadinessPath: "/metrics",
 		})
 	}
 }

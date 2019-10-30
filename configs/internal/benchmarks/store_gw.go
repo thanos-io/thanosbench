@@ -28,6 +28,8 @@ type StoreGatewayOpts struct {
 	StoreAPILabelSelector string
 
 	ObjStoreSecret secret.File
+
+	ReadinessPath string
 }
 
 // NOTE: No persistent volume on purpose to simplify testing. It is must-have!
@@ -107,10 +109,15 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Port: intstr.FromInt(httpPort),
-					Path: "/-/ready",
+					Path: func() string {
+						if opts.ReadinessPath == "" {
+							return "/-/ready"
+						}
+						return opts.ReadinessPath
+					}(),
 				},
 			},
-			InitialDelaySeconds: 350,
+			InitialDelaySeconds: 120,
 			SuccessThreshold:    3,
 			TimeoutSeconds:      10,
 			FailureThreshold:    3,

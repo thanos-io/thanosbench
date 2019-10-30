@@ -37,7 +37,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/thanos/thanos:v0.7.0
+        image: quay.io/thanos/thanos:master-2019-09-07-cfacb10b
         imagePullPolicy: Always
         name: thanos
         ports:
@@ -48,9 +48,9 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /-/ready
+            path: /metrics
             port: 19190
-          initialDelaySeconds: 350
+          initialDelaySeconds: 120
           successThreshold: 3
           timeoutSeconds: 10
         resources:
