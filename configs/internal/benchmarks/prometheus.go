@@ -494,12 +494,12 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 			ServiceName: opts.Name,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: func() map[string]string{
+					Labels: func() map[string]string {
 						if opts.StoreAPILabelSelector == "" {
-							return map[string]string{ selectorName: opts.Name}
+							return map[string]string{selectorName: opts.Name}
 						}
 						return map[string]string{
-							selectorName: opts.Name,
+							selectorName:               opts.Name,
 							opts.StoreAPILabelSelector: "true",
 						}
 					}(),

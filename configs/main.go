@@ -42,8 +42,8 @@ func main() {
 		bench.GenThanosStoreGateway(generator, bench.StoreGatewayOpts{
 			Name:      "store-base",
 			Namespace: namespace,
-			// Bisect.
-			Img:       dockerimage.PublicThanos("master-2019-09-03-f7a238fd"),
+			// Version with expected baseline memory usage.
+			Img: dockerimage.PublicThanos("master-2019-09-03-f7a238fd"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -54,8 +54,9 @@ func main() {
 					corev1.ResourceMemory: resource.MustParse("8Gi"),
 				},
 			},
-			IndexCacheBytes: "0MB",
-			ChunkCacheBytes: "2GB",
+			// Turned off cache for less moving parts.
+			IndexCacheBytes:       "0MB",
+			ChunkCacheBytes:       "2GB",
 			StoreAPILabelSelector: storeAPILabelSelector,
 
 			// You need secret for this.
@@ -94,7 +95,8 @@ func main() {
 		bench.GenThanosStoreGateway(generator, bench.StoreGatewayOpts{
 			Name:      "store-test",
 			Namespace: namespace,
-			Img:       dockerimage.PublicThanos("master-2019-09-04-e8bf6f5d"),
+			// Version introducing regression.
+			Img: dockerimage.PublicThanos("master-2019-09-04-e8bf6f5d"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -105,19 +107,9 @@ func main() {
 					corev1.ResourceMemory: resource.MustParse("8Gi"),
 				},
 			},
-			IndexCacheBytes: "0MB",
-			ChunkCacheBytes: "2GB",
+			IndexCacheBytes:       "0MB",
+			ChunkCacheBytes:       "2GB",
 			StoreAPILabelSelector: storeAPILabelSelector,
-			// You need secret for this.
-			/*
-				apiVersion: v1
-				kind: Secret
-				metadata:
-				  name: s3
-				data:
-				  s3.yaml: |
-				    <base64 config>
-			*/
 			ObjStoreSecret: secret.NewFile(
 				"s3.yaml",
 				"s3",

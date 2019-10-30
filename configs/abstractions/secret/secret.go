@@ -20,7 +20,7 @@ func (f File) Path() string {
 func NewFile(filePath string, secretName string, mountPath string) File {
 	return File{
 		VolumeAndMount: VolumeAndMount(secretName, mountPath),
-		filePath: filePath,
+		filePath:       filePath,
 	}
 }
 
