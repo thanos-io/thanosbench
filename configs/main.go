@@ -94,7 +94,7 @@ func main() {
 		bench.GenThanosStoreGateway(generator, bench.StoreGatewayOpts{
 			Name:      "store-test",
 			Namespace: namespace,
-			Img:       dockerimage.PublicThanos("master-2019-09-07-cfacb10b"),
+			Img:       dockerimage.PublicThanos("master-2019-09-04-e8bf6f5d"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
