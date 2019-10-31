@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  name: query-base-store-apis
+  namespace: default
+spec:
+  clusterIP: None
+  ports:
+  - name: grpc
+    port: 19090
+    targetPort: 19090
+  selector:
+    lts-api: "true"
+  type: ClusterIP
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: query-base
+  name: query-base
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: query-base
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: query-base
+    spec:
+      containers:
+      - args:
+        - query
+        - --log.level=debug
+        - --debug.name=$(POD_NAME)
+        - --query.max-concurrent=99999999
+        - --query.timeout=2h
+        - --query.replica-label=replica
+        - --http-address=0.0.0.0:19190
+        - --grpc-address=0.0.0.0:19090
+        - --store=dnssrv+query-base-store-apis.default.svc.cluster.local:19090
+        command:
+        - thanos
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: quay.io/thanos/thanos:master-2019-10-29-b7f3ac9e
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 19190
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+        name: thanos
+        ports:
+        - containerPort: 19190
+          name: http
+        - containerPort: 19090
+          name: grpc
+        readinessProbe:
+          httpGet:
+            path: -/ready
+            port: 19190
+          successThreshold: 3
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: "1"
+            memory: 2Gi
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: query-base
+  name: query-base
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 19190
+    targetPort: 19190
+  - name: grpc
+    port: 19090
+    targetPort: 19090
+  selector:
+    app: query-base
+  type: ClusterIP
+status:
+  loadBalancer: {}

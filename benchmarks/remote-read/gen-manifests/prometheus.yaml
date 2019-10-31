@@ -115,10 +115,13 @@ spec:
             "InputSeries": [
               {
                 "Type": "gauge",
-                "Jitter": 20,
-                "ChangeInterval": "",
-                "Max": 200000000,
-                "Min": 100000000,
+                "Characteristics": {
+                  "Jitter": 20,
+                  "ScrapeInterval": 15000000000,
+                  "ChangeInterval": 3600000000000,
+                  "Max": 200000000,
+                  "Min": 100000000
+                },
                 "Result": {
                   "resultType": "vector",
                   "result": [

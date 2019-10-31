@@ -64,8 +64,8 @@ var (
 			48 * time.Hour,
 			48 * time.Hour,
 			2 * time.Hour,
-			// 100,000 series per block.
-		}, 1000, 100),
+			// 10,000 series per block.
+		}, 100, 100),
 	}
 )
 
@@ -128,6 +128,7 @@ func realisticK8s(ranges []time.Duration, rolloutInterval time.Duration, apps in
 					s := common
 
 					s.Labels = labels.Labels{
+						// TODO(bwplotka): Use different label for metricPerApp cardinality and stable number.
 						{Name: "__name__", Value: fmt.Sprintf("k8s_app_metric%d", i)},
 						{Name: "next_rollout_time", Value: timestamp.Time(lastRollout).String()},
 					}

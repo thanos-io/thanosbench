@@ -252,6 +252,8 @@ type PrometheusOpts struct {
 
 	DisableCompactions bool
 	ServiceAccountName string
+
+	StoreAPILabelSelector string
 }
 
 // NOTE: No persistent volume on purpose to simplify testing. It is must-have!
@@ -309,7 +311,7 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:      corev1.ServiceTypeClusterIP,
-			ClusterIP: "None",
+			ClusterIP: corev1.ClusterIPNone,
 			Selector: map[string]string{
 				selectorName: opts.Name,
 			},
@@ -492,9 +494,15 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 			ServiceName: opts.Name,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						selectorName: opts.Name,
-					},
+					Labels: func() map[string]string {
+						if opts.StoreAPILabelSelector == "" {
+							return map[string]string{selectorName: opts.Name}
+						}
+						return map[string]string{
+							selectorName:               opts.Name,
+							opts.StoreAPILabelSelector: "true",
+						}
+					}(),
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: opts.ServiceAccountName,

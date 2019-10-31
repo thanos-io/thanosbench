@@ -85,6 +85,7 @@ Prometheus is configured to monitor only the namespace configured in `namespace`
 ### Benchmarks
 
 * [Remote read](benchmarks/remote-read/README.md)
+* [Long term storage read path](benchmarks/lts/README.md)
     
 ## Potential next steps
 
