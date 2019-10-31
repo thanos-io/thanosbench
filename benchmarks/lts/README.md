@@ -75,4 +75,8 @@ http://localhost:9090/graph?g0.range_input=1h&g0.expr=sum(container_memory_worki
 
 ### Block/Series 
 
+http://localhost:9090/graph?g0.range_input=1h&g0.expr=sum(increase(thanos_objstore_bucket_operations_total%5B5m%5D))%20by%20(operation%2C%20instance%2C%20pod)%20&g0.tab=0&g1.range_input=30m&g1.expr=(sum(increase(thanos_bucket_store_series_data_size_fetched_bytes_sum%5B5m%5D)%20%2F%0Aincrease(thanos_bucket_store_series_data_size_fetched_bytes_count%5B5m%5D))%20without%20(data_type))%20%2F%20increase(thanos_bucket_store_series_blocks_queried_sum%5B5m%5D)&g1.tab=0&g2.range_input=30m&g2.expr=increase(thanos_bucket_store_series_data_size_fetched_bytes_sum%5B5m%5D)%20%2F%0Aincrease(thanos_bucket_store_series_data_size_fetched_bytes_count%5B5m%5D)&g2.tab=0&g3.range_input=1h&g3.expr=increase(thanos_bucket_store_series_data_size_fetched_bytes_sum%5B5m%5D)&g3.tab=0&g4.range_input=30m&g4.expr=histogram_quantile(0.95%2C%20sum(rate(thanos_objstore_bucket_operation_duration_seconds_bucket%5B1m%5D))%20by%20(operation%2C%20instance%2C%20pod%2C%20le))&g4.tab=0&g5.range_input=1h&g5.expr=increase(thanos_bucket_store_series_blocks_queried_sum%5B5m%5D)&g5.tab=0
+
+### gRPC
+
 http://localhost:9090/graph?g0.range_input=2h&g0.expr=increase(grpc_server_msg_received_total%7Bgrpc_method%3D%22Series%22%7D%5B5m%5D)&g0.tab=0&g1.range_input=2h&g1.expr=increase(grpc_server_msg_sent_total%7Bgrpc_method%3D%22Series%22%7D%5B5m%5D)%20%2F%20increase(grpc_server_msg_received_total%7Bgrpc_method%3D%22Series%22%7D%5B5m%5D)&g1.tab=0

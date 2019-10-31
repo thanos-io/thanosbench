@@ -42,8 +42,8 @@ func main() {
 		bench.GenThanosStoreGateway(generator, bench.StoreGatewayOpts{
 			Name:      "store-base",
 			Namespace: namespace,
-			// Version with expected baseline memory usage.
-			Img: dockerimage.PublicThanos("master-2019-09-03-f7a238fd"),
+			// Some baseline to compare with. Feel free to play with different versions!
+			Img: dockerimage.PublicThanos("v0.7.0"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -54,7 +54,7 @@ func main() {
 					corev1.ResourceMemory: resource.MustParse("8Gi"),
 				},
 			},
-			// Turned off cache for less moving parts.
+			// NOTE(bwplotka): Turned off cache for less moving parts.
 			IndexCacheBytes:       "0MB",
 			ChunkCacheBytes:       "2GB",
 			StoreAPILabelSelector: storeAPILabelSelector,
@@ -95,8 +95,9 @@ func main() {
 		bench.GenThanosStoreGateway(generator, bench.StoreGatewayOpts{
 			Name:      "store-test",
 			Namespace: namespace,
-			// Version introducing regression.
-			Img: dockerimage.PublicThanos("master-2019-09-04-e8bf6f5d"),
+			// e.g Fresh-ish master.
+			// Feel free to play with different versions!
+			Img: dockerimage.PublicThanos("master-2019-10-29-b7f3ac9e"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -107,6 +108,7 @@ func main() {
 					corev1.ResourceMemory: resource.MustParse("8Gi"),
 				},
 			},
+			// NOTE(bwplotka): Turned off cache for less moving parts.
 			IndexCacheBytes:       "0MB",
 			ChunkCacheBytes:       "2GB",
 			StoreAPILabelSelector: storeAPILabelSelector,
