@@ -1,46 +1,63 @@
-package bench
+package k8s
 
 import (
 	"fmt"
 
 	"github.com/bwplotka/mimic"
-	"github.com/bwplotka/mimic/abstractions/kubernetes/volumes"
 	"github.com/bwplotka/mimic/encoding"
 	"github.com/go-openapi/swag"
 	"github.com/thanos-io/thanosbench/configs/abstractions/dockerimage"
-	"github.com/thanos-io/thanosbench/configs/abstractions/secret"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-type StoreGatewayOpts struct {
+type QuerierOpts struct {
 	Namespace string
 	Name      string
 
 	Img       dockerimage.Image
 	Resources corev1.ResourceRequirements
 
-	IndexCacheBytes string // 250MB
-	ChunkCacheBytes string // 2GB
-
 	StoreAPILabelSelector string
 
-	ObjStoreSecret secret.File
-
-	ReadinessPath string
+	// TODO(bwplotka): Add static storeAPIs option.
 }
 
-// NOTE: No persistent volume on purpose to simplify testing. It is must-have!
-func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
+func GenThanosQuerier(gen *mimic.Generator, opts QuerierOpts) {
 	const (
 		replicas = 1
-		dataPath = "/data"
-
 		httpPort = 19190
 		grpcPort = 19090
 	)
+
+	// Special headless k8s service for SRV lookup to discover local StoreAPIs.
+	// https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
+	storeAPISrv := corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      opts.Name + "-store-apis",
+			Namespace: opts.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP,
+			Selector: map[string]string{
+				opts.StoreAPILabelSelector: "true",
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "grpc",
+					Port:       grpcPort,
+					TargetPort: intstr.FromInt(grpcPort),
+				},
+			},
+			ClusterIP: corev1.ClusterIPNone,
+		},
+	}
 
 	srv := corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -74,27 +91,22 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 		},
 	}
 
-	sharedVM := volumes.VolumeAndMount{
-		VolumeMount: corev1.VolumeMount{
-			Name:      opts.Name,
-			MountPath: dataPath,
-		},
-	}
-
-	storeContainer := corev1.Container{
+	querierContainer := corev1.Container{
 		Name:    "thanos",
 		Image:   opts.Img.String(),
 		Command: []string{"thanos"},
 		Args: []string{
-			"store",
+			"query",
 			"--log.level=debug",
 			"--debug.name=$(POD_NAME)",
-			fmt.Sprintf("--objstore.config-file=%s", opts.ObjStoreSecret.Path()),
-			fmt.Sprintf("--index-cache-size=%s", opts.IndexCacheBytes),
-			fmt.Sprintf("--chunk-pool-size=%s", opts.ChunkCacheBytes),
+			// Large limits!
+			fmt.Sprintf("--query.max-concurrent=%d", 99999999),
+			fmt.Sprintf("--query.timeout=%s", "2h"),
+			fmt.Sprintf("--query.replica-label=%s", "replica"),
 			fmt.Sprintf("--http-address=0.0.0.0:%d", httpPort),
 			fmt.Sprintf("--grpc-address=0.0.0.0:%d", grpcPort),
-			fmt.Sprintf("--data-dir=%s", dataPath),
+
+			fmt.Sprintf("--store=dnssrv+%s.default.svc.cluster.local:%d", storeAPISrv.Name, grpcPort),
 		},
 		Env: []corev1.EnvVar{
 			// NOTE: Add following env var for old go memory management: {Name: "GODEBUG", Value:"madvdontneed=1"}.
@@ -108,31 +120,22 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
+					Path: "-/ready",
 					Port: intstr.FromInt(httpPort),
-					Path: func() string {
-						if opts.ReadinessPath == "" {
-							return "/-/ready"
-						}
-						return opts.ReadinessPath
-					}(),
 				},
 			},
-			InitialDelaySeconds: 120,
-			SuccessThreshold:    3,
-			TimeoutSeconds:      10,
-			FailureThreshold:    3,
+			SuccessThreshold: 3,
 		},
-		//LivenessProbe: &corev1.Probe{
-		//	Handler: corev1.Handler{
-		//		HTTPGet: &corev1.HTTPGetAction{
-		//			Path: "/-/healthy",
-		//			Port: intstr.FromInt(httpPort),
-		//		},
-		//	},
-		//	InitialDelaySeconds: 350,
-		//	TimeoutSeconds:      30,
-		//	FailureThreshold:    3,
-		//},
+		LivenessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/-/healthy",
+					Port: intstr.FromInt(httpPort),
+				},
+			},
+			InitialDelaySeconds: 30,
+			TimeoutSeconds:      30,
+		},
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          "http",
@@ -143,17 +146,12 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 				ContainerPort: grpcPort,
 			},
 		},
-		VolumeMounts: volumes.VolumesAndMounts{sharedVM, opts.ObjStoreSecret.VolumeAndMount}.VolumeMounts(),
-		SecurityContext: &corev1.SecurityContext{
-			RunAsNonRoot: swag.Bool(false),
-			RunAsUser:    swag.Int64(1000),
-		},
 		Resources: opts.Resources,
 	}
 
-	set := appsv1.StatefulSet{
+	dpl := appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "StatefulSet",
+			Kind:       "Deployment",
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -163,24 +161,16 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 				selectorName: opts.Name,
 			},
 		},
-		Spec: appsv1.StatefulSetSpec{
-			Replicas:    swag.Int32(replicas),
-			ServiceName: opts.Name,
+		Spec: appsv1.DeploymentSpec{
+			Replicas: swag.Int32(replicas),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: func() map[string]string {
-						if opts.StoreAPILabelSelector == "" {
-							return map[string]string{selectorName: opts.Name}
-						}
-						return map[string]string{
-							selectorName:               opts.Name,
-							opts.StoreAPILabelSelector: "true",
-						}
-					}(),
+					Labels: map[string]string{
+						selectorName: opts.Name,
+					},
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{storeContainer},
-					Volumes:    volumes.VolumesAndMounts{sharedVM, opts.ObjStoreSecret.VolumeAndMount}.Volumes(),
+					Containers: []corev1.Container{querierContainer},
 				},
 			},
 			Selector: &metav1.LabelSelector{
@@ -190,5 +180,5 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 			},
 		},
 	}
-	gen.Add(opts.Name+".yaml", encoding.GhodssYAML(set, srv))
+	gen.Add(opts.Name+".yaml", encoding.GhodssYAML(storeAPISrv, dpl, srv))
 }

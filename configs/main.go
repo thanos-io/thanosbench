@@ -4,7 +4,7 @@ import (
 	"github.com/bwplotka/mimic"
 	"github.com/thanos-io/thanosbench/configs/abstractions/dockerimage"
 	"github.com/thanos-io/thanosbench/configs/abstractions/secret"
-	bench "github.com/thanos-io/thanosbench/configs/internal/benchmarks"
+	k8s "github.com/thanos-io/thanosbench/configs/internal/kubernetes"
 	"gopkg.in/alecthomas/kingpin.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -24,22 +24,22 @@ func main() {
 
 	{
 		// Resources for monitor observing benchmarks/tests.
-		bench.GenMonitor(generator.With("monitor", "gen-manifests"), namespace)
-		bench.GenCadvisor(generator.With("cadvisor", "gen-manifests"), namespace)
+		k8s.GenMonitor(generator.With("monitor", "gen-manifests"), namespace)
+		k8s.GenCadvisor(generator.With("cadvisor", "gen-manifests"), namespace)
 	}
 
 	// Generate resources for various benchmarks.
 	{
 		generator := generator.With("remote-read", "gen-manifests")
 
-		bench.GenRemoteReadBenchPrometheus(generator, "prometheus", namespace, dockerimage.PublicPrometheus("v2.12.0"), dockerimage.PublicThanos("v0.7.0"))
-		bench.GenRemoteReadBenchPrometheus(generator, "prometheus-rr-streamed", namespace, dockerimage.PublicPrometheus("v2.13.0"), dockerimage.PublicThanos("v0.7.0"))
+		k8s.GenRemoteReadBenchPrometheus(generator, "prometheus", namespace, dockerimage.PublicPrometheus("v2.12.0"), dockerimage.PublicThanos("v0.7.0"))
+		k8s.GenRemoteReadBenchPrometheus(generator, "prometheus-rr-streamed", namespace, dockerimage.PublicPrometheus("v2.13.0"), dockerimage.PublicThanos("v0.7.0"))
 	}
 	{
 		generator := generator.With("lts", "gen-manifests")
 
 		const storeAPILabelSelector = "lts-api"
-		bench.GenThanosStoreGateway(generator, bench.StoreGatewayOpts{
+		k8s.GenThanosStoreGateway(generator, k8s.StoreGatewayOpts{
 			Name:      "store-base",
 			Namespace: namespace,
 			// Some baseline to compare with. Feel free to play with different versions!
@@ -76,7 +76,7 @@ func main() {
 			),
 			ReadinessPath: "/metrics",
 		})
-		bench.GenThanosQuerier(generator, bench.QuerierOpts{
+		k8s.GenThanosQuerier(generator, k8s.QuerierOpts{
 			Name:      "query-base",
 			Namespace: namespace,
 			Img:       dockerimage.PublicThanos("master-2019-10-29-b7f3ac9e"),
@@ -92,7 +92,7 @@ func main() {
 			},
 			StoreAPILabelSelector: storeAPILabelSelector,
 		})
-		bench.GenThanosStoreGateway(generator, bench.StoreGatewayOpts{
+		k8s.GenThanosStoreGateway(generator, k8s.StoreGatewayOpts{
 			Name:      "store-test",
 			Namespace: namespace,
 			// e.g Fresh-ish master.

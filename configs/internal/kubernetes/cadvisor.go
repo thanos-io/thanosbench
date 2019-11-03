@@ -1,4 +1,4 @@
-package bench
+package k8s
 
 import (
 	"github.com/bwplotka/mimic"

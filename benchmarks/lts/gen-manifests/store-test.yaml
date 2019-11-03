@@ -37,7 +37,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/thanos/thanos:master-2019-09-04-e8bf6f5d
+        image: quay.io/thanos/thanos:master-2019-10-29-b7f3ac9e
         imagePullPolicy: Always
         name: thanos
         ports:
