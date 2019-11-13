@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   creationTimestamp: null
-  name: query-store-apis
+  name: query-base-store-apis
   namespace: default
 spec:
   clusterIP: None
@@ -11,7 +11,7 @@ spec:
     port: 19090
     targetPort: 19090
   selector:
-    lts-api: "true"
+    lts-api-base: "true"
   type: ClusterIP
 status:
   loadBalancer: {}
@@ -21,22 +21,22 @@ kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    app: query
-  name: query
+    app: query-base
+  name: query-base
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: query
+      app: query-base
   strategy: {}
   template:
     metadata:
       annotations:
-        version: thanos-local:05fafc96ff75dc8485fc05ea133a9ffadf874eb4
+        version: quay.io/thanos/thanos:v0.7.0
       creationTimestamp: null
       labels:
-        app: query
+        app: query-base
     spec:
       containers:
       - args:
@@ -48,7 +48,7 @@ spec:
         - --query.replica-label=replica
         - --http-address=0.0.0.0:19190
         - --grpc-address=0.0.0.0:19090
-        - --store=dnssrv+query-store-apis.default.svc.cluster.local:19090
+        - --store=dnssrv+query-base-store-apis.default.svc.cluster.local:19090
         command:
         - thanos
         env:
@@ -56,7 +56,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: thanos-local:05fafc96ff75dc8485fc05ea133a9ffadf874eb4
+        image: quay.io/thanos/thanos:v0.7.0
         livenessProbe:
           httpGet:
             path: /-/healthy
@@ -72,7 +72,7 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /-/ready
+            path: /metrics
             port: 19190
           initialDelaySeconds: 120
           successThreshold: 3
@@ -91,8 +91,8 @@ kind: Service
 metadata:
   creationTimestamp: null
   labels:
-    app: query
-  name: query
+    app: query-base
+  name: query-base
   namespace: default
 spec:
   ports:
@@ -103,7 +103,7 @@ spec:
     port: 19090
     targetPort: 19090
   selector:
-    app: query
+    app: query-base
   type: ClusterIP
 status:
   loadBalancer: {}

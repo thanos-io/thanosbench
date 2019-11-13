@@ -26,25 +26,21 @@ func thanosImageFromFlag(tag string) dockerimage.Image {
 }
 
 func main() {
-	var (
-		tag     *string
-		baseTag *string
-	)
+	var tag *string
 	generator := mimic.New(func(cmd *kingpin.CmdClause) {
 		cmd.GetFlag("output").Default("benchmarks/lts/manifests")
-		baseTag = cmd.Flag("base-tag", "Thanos docker image to use for base deployment. If empty, base is not generated").String()
 		tag = cmd.Flag("tag", "Thanos docker image to use for deployment").Required().String()
 	})
 
 	// Make sure to generate at the very end.
 	defer generator.Generate()
 
-	if *baseTag != "" {
+	{
 		const storeAPILabelSelector = "lts-api-base"
 		k8s.GenThanosStoreGateway(generator, k8s.StoreGatewayOpts{
 			Name:      "store-base",
 			Namespace: benchmarks.Namespace,
-			Img:       thanosImageFromFlag(*baseTag),
+			Img:       dockerimage.PublicThanos("v0.7.0"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -80,7 +76,7 @@ func main() {
 		k8s.GenThanosQuerier(generator, k8s.QuerierOpts{
 			Name:      "query-base",
 			Namespace: benchmarks.Namespace,
-			Img:       thanosImageFromFlag(*baseTag),
+			Img:       dockerimage.PublicThanos("v0.7.0"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -92,6 +88,7 @@ func main() {
 				},
 			},
 			StoreAPILabelSelector: storeAPILabelSelector,
+			ReadinessPath:         "/metrics",
 		})
 	}
 	{
@@ -120,7 +117,6 @@ func main() {
 				"s3",
 				"/s3/config",
 			),
-			ReadinessPath: "/metrics",
 		})
 		k8s.GenThanosQuerier(generator, k8s.QuerierOpts{
 			Name:      "query",

@@ -18,4 +18,3 @@ func main() {
 	// Resources for monitor observing benchmarks/tests.
 	k8s.GenMonitor(generator, benchmarks.Namespace)
 }
-

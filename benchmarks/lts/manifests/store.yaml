@@ -14,6 +14,8 @@ spec:
   serviceName: store
   template:
     metadata:
+      annotations:
+        version: thanos-local:05fafc96ff75dc8485fc05ea133a9ffadf874eb4
       creationTimestamp: null
       labels:
         app: store
@@ -37,8 +39,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/thanos/thanos:v0.8.1
-        imagePullPolicy: Always
+        image: thanos-local:05fafc96ff75dc8485fc05ea133a9ffadf874eb4
         name: thanos
         ports:
         - containerPort: 19190
@@ -48,7 +49,7 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /metrics
+            path: /-/ready
             port: 19190
           initialDelaySeconds: 120
           successThreshold: 3

@@ -104,7 +104,6 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 				},
 			}},
 		},
-		ImagePullPolicy: corev1.PullAlways,
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
@@ -177,6 +176,9 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 							opts.StoreAPILabelSelector: "true",
 						}
 					}(),
+					Annotations: map[string]string{
+						"version": opts.Img.String(),
+					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{storeContainer},
