@@ -1,52 +1,35 @@
-apiVersion: v1
-kind: Service
-metadata:
-  creationTimestamp: null
-  name: query-base-store-apis
-  namespace: default
-spec:
-  clusterIP: None
-  ports:
-  - name: grpc
-    port: 19090
-    targetPort: 19090
-  selector:
-    lts-api: "true"
-  type: ClusterIP
-status:
-  loadBalancer: {}
----
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   creationTimestamp: null
   labels:
-    app: query-base
-  name: query-base
+    app: store
+  name: store
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: query-base
-  strategy: {}
+      app: store
+  serviceName: store
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: query-base
+        app: store
+        lts-api: "true"
     spec:
       containers:
       - args:
-        - query
+        - store
         - --log.level=debug
         - --debug.name=$(POD_NAME)
-        - --query.max-concurrent=99999999
-        - --query.timeout=2h
-        - --query.replica-label=replica
+        - --objstore.config-file=/s3/config/s3.yaml
+        - --index-cache-size=0MB
+        - --chunk-pool-size=2GB
         - --http-address=0.0.0.0:19190
         - --grpc-address=0.0.0.0:19090
-        - --store=dnssrv+query-base-store-apis.default.svc.cluster.local:19090
+        - --data-dir=/data
         command:
         - thanos
         env:
@@ -54,14 +37,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/thanos/thanos:master-2019-10-29-b7f3ac9e
+        image: quay.io/thanos/thanos:v0.8.1
         imagePullPolicy: Always
-        livenessProbe:
-          httpGet:
-            path: /-/healthy
-            port: 19190
-          initialDelaySeconds: 30
-          timeoutSeconds: 30
         name: thanos
         ports:
         - containerPort: 19190
@@ -69,26 +46,45 @@ spec:
         - containerPort: 19090
           name: grpc
         readinessProbe:
+          failureThreshold: 3
           httpGet:
-            path: -/ready
+            path: /metrics
             port: 19190
+          initialDelaySeconds: 120
           successThreshold: 3
+          timeoutSeconds: 10
         resources:
           limits:
             cpu: "1"
-            memory: 2Gi
+            memory: 8Gi
           requests:
             cpu: "1"
             memory: 2Gi
-status: {}
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 1000
+        volumeMounts:
+        - mountPath: /data
+          name: store
+        - mountPath: /s3/config
+          name: s3
+          readOnly: true
+      volumes:
+      - name: store
+      - name: s3
+        secret:
+          secretName: s3
+  updateStrategy: {}
+status:
+  replicas: 0
 ---
 apiVersion: v1
 kind: Service
 metadata:
   creationTimestamp: null
   labels:
-    app: query-base
-  name: query-base
+    app: store
+  name: store
   namespace: default
 spec:
   ports:
@@ -99,7 +95,7 @@ spec:
     port: 19090
     targetPort: 19090
   selector:
-    app: query-base
+    app: store
   type: ClusterIP
 status:
   loadBalancer: {}

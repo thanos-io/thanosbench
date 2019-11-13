@@ -192,6 +192,9 @@ data:
       - source_labels: [__meta_kubernetes_pod_label_app]
         target_label: job
         action: replace
+      - source_labels: [__meta_kubernetes_pod_annotation_version]
+        target_label: version
+        action: replace
       - source_labels: [job, __meta_kubernetes_pod_container_port_name]
         regex: (.+);m-(.+)
         target_label: job

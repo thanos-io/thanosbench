@@ -1,49 +1,50 @@
 package main
 
 import (
+	"regexp"
+
 	"github.com/bwplotka/mimic"
+	"github.com/thanos-io/thanosbench/benchmarks"
 	"github.com/thanos-io/thanosbench/configs/abstractions/dockerimage"
 	"github.com/thanos-io/thanosbench/configs/abstractions/secret"
-	k8s "github.com/thanos-io/thanosbench/configs/internal/kubernetes"
+	k8s "github.com/thanos-io/thanosbench/configs/kubernetes"
 	"gopkg.in/alecthomas/kingpin.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-const (
-	namespace = "default"
-)
+func thanosImageFromFlag(tag string) dockerimage.Image {
+	if regexp.MustCompile(`^(v[0-9]+\.|master-).*`).MatchString(tag) {
+		return dockerimage.PublicThanos(tag)
+	}
+
+	return dockerimage.Image{
+		Organization: "",
+		Project:      "thanos-local",
+		Version:      tag,
+	}
+}
 
 func main() {
+	var (
+		tag     *string
+		baseTag *string
+	)
 	generator := mimic.New(func(cmd *kingpin.CmdClause) {
-		cmd.GetFlag("output").Default("benchmarks")
+		cmd.GetFlag("output").Default("benchmarks/lts/manifests")
+		baseTag = cmd.Flag("base-tag", "Thanos docker image to use for base deployment. If empty, base is not generated").String()
+		tag = cmd.Flag("tag", "Thanos docker image to use for deployment").Required().String()
 	})
 
 	// Make sure to generate at the very end.
 	defer generator.Generate()
 
-	{
-		// Resources for monitor observing benchmarks/tests.
-		k8s.GenMonitor(generator.With("monitor", "gen-manifests"), namespace)
-		k8s.GenCadvisor(generator.With("cadvisor", "gen-manifests"), namespace)
-	}
-
-	// Generate resources for various benchmarks.
-	{
-		generator := generator.With("remote-read", "gen-manifests")
-
-		k8s.GenRemoteReadBenchPrometheus(generator, "prometheus", namespace, dockerimage.PublicPrometheus("v2.12.0"), dockerimage.PublicThanos("v0.7.0"))
-		k8s.GenRemoteReadBenchPrometheus(generator, "prometheus-rr-streamed", namespace, dockerimage.PublicPrometheus("v2.13.0"), dockerimage.PublicThanos("v0.7.0"))
-	}
-	{
-		generator := generator.With("lts", "gen-manifests")
-
-		const storeAPILabelSelector = "lts-api"
+	if *baseTag != "" {
+		const storeAPILabelSelector = "lts-api-base"
 		k8s.GenThanosStoreGateway(generator, k8s.StoreGatewayOpts{
 			Name:      "store-base",
-			Namespace: namespace,
-			// Some baseline to compare with. Feel free to play with different versions!
-			Img: dockerimage.PublicThanos("v0.7.0"),
+			Namespace: benchmarks.Namespace,
+			Img:       thanosImageFromFlag(*baseTag),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -67,7 +68,7 @@ func main() {
 				  name: s3
 				data:
 				  s3.yaml: |
-				    <base64 config>
+					<base64 config>
 			*/
 			ObjStoreSecret: secret.NewFile(
 				"s3.yaml",
@@ -78,8 +79,8 @@ func main() {
 		})
 		k8s.GenThanosQuerier(generator, k8s.QuerierOpts{
 			Name:      "query-base",
-			Namespace: namespace,
-			Img:       dockerimage.PublicThanos("master-2019-10-29-b7f3ac9e"),
+			Namespace: benchmarks.Namespace,
+			Img:       thanosImageFromFlag(*baseTag),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -92,12 +93,14 @@ func main() {
 			},
 			StoreAPILabelSelector: storeAPILabelSelector,
 		})
+	}
+	{
+		const storeAPILabelSelector = "lts-api"
 		k8s.GenThanosStoreGateway(generator, k8s.StoreGatewayOpts{
-			Name:      "store-test",
-			Namespace: namespace,
-			// e.g Fresh-ish master.
+			Name:      "store",
+			Namespace: benchmarks.Namespace,
 			// Feel free to play with different versions!
-			Img: dockerimage.PublicThanos("master-2019-10-29-b7f3ac9e"),
+			Img: thanosImageFromFlag(*tag),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -118,6 +121,22 @@ func main() {
 				"/s3/config",
 			),
 			ReadinessPath: "/metrics",
+		})
+		k8s.GenThanosQuerier(generator, k8s.QuerierOpts{
+			Name:      "query",
+			Namespace: benchmarks.Namespace,
+			Img:       thanosImageFromFlag(*tag),
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("2Gi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("2Gi"),
+				},
+			},
+			StoreAPILabelSelector: storeAPILabelSelector,
 		})
 	}
 }

@@ -9,7 +9,11 @@ type Image struct {
 }
 
 func (i Image) String() string {
-	return fmt.Sprintf("%s/%s:%s", i.Organization, i.Project, i.Version)
+	prefix := i.Organization
+	if prefix != "" {
+		prefix += "/"
+	}
+	return fmt.Sprintf("%s%s:%s", prefix, i.Project, i.Version)
 }
 
 func PublicThanos(tag string) Image {

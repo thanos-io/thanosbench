@@ -22,8 +22,8 @@ type StoreGatewayOpts struct {
 	Img       dockerimage.Image
 	Resources corev1.ResourceRequirements
 
-	IndexCacheBytes string // 250MB
-	ChunkCacheBytes string // 2GB
+	IndexCacheBytes string // Defaults: 250MB
+	ChunkCacheBytes string // Defaults: 2GB
 
 	StoreAPILabelSelector string
 
@@ -32,7 +32,7 @@ type StoreGatewayOpts struct {
 	ReadinessPath string
 }
 
-// NOTE: No persistent volume on purpose to simplify testing. It is must-have!
+// NOTE: No persistent volume on purpose to simplify testing. It is must-have on the production setup.
 func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 	const (
 		replicas = 1

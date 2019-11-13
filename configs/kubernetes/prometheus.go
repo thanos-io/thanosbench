@@ -135,6 +135,11 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 							TargetLabel:  "job",
 						},
 						{
+							SourceLabels: model.LabelNames{"__meta_kubernetes_pod_annotation_version"},
+							Action:       prometheus.RelabelReplace,
+							TargetLabel:  "version",
+						},
+						{
 							Action: prometheus.RelabelReplace,
 							SourceLabels: model.LabelNames{
 								"job",
