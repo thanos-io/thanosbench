@@ -22,6 +22,7 @@ type QuerierOpts struct {
 
 	StoreAPILabelSelector string
 
+	ReadinessPath string
 	// TODO(bwplotka): Add static storeAPIs option.
 }
 
@@ -105,7 +106,6 @@ func GenThanosQuerier(gen *mimic.Generator, opts QuerierOpts) {
 			fmt.Sprintf("--query.replica-label=%s", "replica"),
 			fmt.Sprintf("--http-address=0.0.0.0:%d", httpPort),
 			fmt.Sprintf("--grpc-address=0.0.0.0:%d", grpcPort),
-
 			fmt.Sprintf("--store=dnssrv+%s.default.svc.cluster.local:%d", storeAPISrv.Name, grpcPort),
 		},
 		Env: []corev1.EnvVar{
@@ -116,15 +116,21 @@ func GenThanosQuerier(gen *mimic.Generator, opts QuerierOpts) {
 				},
 			}},
 		},
-		ImagePullPolicy: corev1.PullAlways,
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "-/ready",
 					Port: intstr.FromInt(httpPort),
+					Path: func() string {
+						if opts.ReadinessPath == "" {
+							return "/-/ready"
+						}
+						return opts.ReadinessPath
+					}(),
 				},
 			},
 			SuccessThreshold: 3,
+			TimeoutSeconds:   10,
+			FailureThreshold: 3,
 		},
 		LivenessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
@@ -167,6 +173,9 @@ func GenThanosQuerier(gen *mimic.Generator, opts QuerierOpts) {
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						selectorName: opts.Name,
+					},
+					Annotations: map[string]string{
+						"version": opts.Img.String(),
 					},
 				},
 				Spec: corev1.PodSpec{

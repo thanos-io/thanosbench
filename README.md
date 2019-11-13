@@ -67,20 +67,16 @@ bear in mind that most of the benchmarks are around memory allocations, so it's 
 
 You can do on `default` namespace by running:
 
-`make gen && kubectl apply -f benchmarks/monitor/gen-manifests`    
+`make gen && kubectl apply -f benchmarks/monitor/manifests`    
     
- For any adjustment, edit [configs/main.go](https://github.com/thanos-io/thanosbench/blob/db8874ab23f480f33cdb4ac4eeec57562f566dd8/configs/main.go#L25) or related template. 
+ For any adjustment, edit [benchmarks/monitor/main.go](https://github.com/thanos-io/thanosbench/blob/db8874ab23f480f33cdb4ac4eeec57562f566dd8/benchmarks/monitor/main.go#L25) or related template. 
  `make gen` will generate the YAMLs.
  
 Prometheus is configured to monitor only the namespace configured in `namespace` argument. With few pods it should took at most 100MB of memory on average. 
  
 3. Forward port to see Prometheus UI: `kubectl port-forward svc/monitor 9090:9090`
  
-4. (Optionally) if you run e.g on GKE, you might want to run your own `cadvisor` daemon set: 
-
-`make gen && kubectl apply -f benchmarks/cadvisor/gen-manifests/cadvisor.yaml`  
-
-`kind` has advisor built in and default Prometheus is set to monitor it.
+`kind` has cadvisor built in and default Prometheus is set to monitor it.
 
 ### Benchmarks
 
