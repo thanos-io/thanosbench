@@ -84,7 +84,10 @@ crossbuild: $(PROMU)
 .PHONY: gen
 gen:
 	@echo ">> generating benchmarks configs"
-	@go run configs/main.go generate
+	@rm -rf benchmarks/**/manifests
+	@go run benchmarks/base/main.go generate
+	@go run benchmarks/lts/main.go generate --tag=v0.8.1
+	@go run benchmarks/remote-read/main.go generate
 
 .PHONY: promu
 promu: $(PROMU)

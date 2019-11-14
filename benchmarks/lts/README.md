@@ -13,18 +13,17 @@ For now it is used for adhoc hacking and benchmarking.
 * See [README.md](/README.md#Prerequisites) (example of setting up cluster + monitor)
 * Object storage bucket:
   * Prepare Thanos YAML objstore configuration: [see this doc](https://thanos.io/storage.md/#configuration)
-  * Add this yaml as a secret to your K8s cluster
-  * Change accordingly the [go definitions under `generator := generator.With("lts", "gen-manifests")`](/configs/main.go) and run `make gen`
+  * Add the yaml as a secret to your K8s cluster
+  * Change accordingly the [go definitions](main.go) and run `make gen` or `go run benchmarks/lts/main.go generate --tag=<thanos quay image tag>`
   
 ## Usage
 
 * Generate YAMLs from definitions:
-  * `make gen`
-  * Feel free to edit [go definitions under `generator := generator.With("lts", "gen-manifests")`](/configs/main.go) any time to play with and regenerate the output YAMLs.
+  * `make gen` or `go run benchmarks/lts/main.go generate --tag=<thanos quay image tag>` any time to regenerate the output YAMLs.
 
-You should see [2 Store GW and 1 Query](/benchmarks/lts/gen-manifests).
+You should see [2 Store GW and 2 Queries](/benchmarks/lts/manifests).
  
-One Store can be used as a baseline, second can be used to test differences across versions.
+One Path can be used as a baseline, second can be used to test differences across versions.
 
 * Generate test dataset
 
@@ -52,7 +51,7 @@ config:
 ```
 
 * Apply any definition you want to run:
-  * `kubectl apply -f benchmarks/lts/gen-manifests/<choose>.yaml`
+  * `kubectl apply -f benchmarks/lts/manifests/<choose>.yaml`
 
 Dataset mentioned above use roughly 12MB baseline memory.
 

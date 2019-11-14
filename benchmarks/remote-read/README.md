@@ -15,13 +15,13 @@ This definition contains Prometheus statefulsets definitions set up to test remo
 * Generate YAMLs from definitions:
   * `make gen`
 
-You should see [2 Prometheus + Thanos definitions](/benchmarks/remote-read/gen-manifests). One is baseline,
+You should see [2 Prometheus + Thanos definitions](/benchmarks/remote-read/manifests). One is baseline,
 second is a version with modified remote read that allows streaming encoded chunks.
 
 Those resources are crafted for benchmark purposes -> they generate artificial metric data in the init container.
 
 * Apply baseline or improved version:
-  * `kubectl apply -f benchmarks/remote-read/gen-manifests/<choose>.yaml`
+  * `kubectl apply -f benchmarks/remote-read/manifests/<choose>.yaml`
 
 NOTE: because of init container generating data - init can take few minutes and lots of memory (roughly 6GB per 10k series).
 

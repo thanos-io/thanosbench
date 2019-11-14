@@ -11,7 +11,7 @@ spec:
     port: 19090
     targetPort: 19090
   selector:
-    lts-api: "true"
+    lts-api-base: "true"
   type: ClusterIP
 status:
   loadBalancer: {}
@@ -32,6 +32,8 @@ spec:
   strategy: {}
   template:
     metadata:
+      annotations:
+        version: quay.io/thanos/thanos:v0.7.0
       creationTimestamp: null
       labels:
         app: query-base
@@ -54,8 +56,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/thanos/thanos:master-2019-10-29-b7f3ac9e
-        imagePullPolicy: Always
+        image: quay.io/thanos/thanos:v0.7.0
         livenessProbe:
           httpGet:
             path: /-/healthy
@@ -69,10 +70,13 @@ spec:
         - containerPort: 19090
           name: grpc
         readinessProbe:
+          failureThreshold: 3
           httpGet:
-            path: -/ready
+            path: /metrics
             port: 19190
+          initialDelaySeconds: 120
           successThreshold: 3
+          timeoutSeconds: 10
         resources:
           limits:
             cpu: "1"
