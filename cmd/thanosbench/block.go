@@ -42,7 +42,7 @@ func registerBlock(m map[string]setupFunc, app *kingpin.Application) {
 	registerBlockPlan(m, cmd)
 }
 func registerBlockGen(m map[string]setupFunc, root *kingpin.CmdClause) {
-	cmd := root.Command("gen", "Generates Prometheus/Thanos TSDB blocks from input. Expects []blockgen.BlockSpeck in YAML format as input.")
+	cmd := root.Command("gen", "Generates Prometheus/Thanos TSDB blocks from input. Expects []blockgen.BlockSpec in YAML format as input.")
 	outputDir := cmd.Flag("output.dir", "Output directory for generated data.").Required().String()
 	workers := cmd.Flag("workers", "Number of go routines for block generation. If 0, 2*runtime.GOMAXPROCS(0) is used.").Int()
 	m["block gen"] = func(g *run.Group, logger log.Logger) error {

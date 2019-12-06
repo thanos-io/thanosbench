@@ -32,7 +32,7 @@ Commands:
     Generates TSDB data into WAL files.
 
   block gen --output.dir=OUTPUT.DIR [<flags>]
-    Generates Prometheus/Thanos TSDB blocks from input. Expects []blockgen.BlockSpeck in YAML format as input.
+    Generates Prometheus/Thanos TSDB blocks from input. Expects []blockgen.BlockSpec in YAML format as input.
 
   block plan --profile=PROFILE --labels=<name>="<value>" [<flags>]
     Plan generates blocks specs used by blockgen command to build blocks.
