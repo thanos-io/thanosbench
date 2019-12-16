@@ -15,7 +15,7 @@ spec:
   template:
     metadata:
       annotations:
-        version: thanos-local:05fafc96ff75dc8485fc05ea133a9ffadf874eb4
+        version: quay.io/thanos/thanos:v0.8.1
       creationTimestamp: null
       labels:
         app: store
@@ -39,7 +39,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: thanos-local:05fafc96ff75dc8485fc05ea133a9ffadf874eb4
+        image: quay.io/thanos/thanos:v0.8.1
         name: thanos
         ports:
         - containerPort: 19190
@@ -61,9 +61,6 @@ spec:
           requests:
             cpu: "1"
             memory: 2Gi
-        securityContext:
-          runAsNonRoot: false
-          runAsUser: 1000
         volumeMounts:
         - mountPath: /data
           name: store

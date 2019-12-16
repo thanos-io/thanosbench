@@ -143,10 +143,6 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 			},
 		},
 		VolumeMounts: volumes.VolumesAndMounts{sharedVM, opts.ObjStoreSecret.VolumeAndMount}.VolumeMounts(),
-		SecurityContext: &corev1.SecurityContext{
-			RunAsNonRoot: swag.Bool(false),
-			RunAsUser:    swag.Int64(1000),
-		},
 		Resources: opts.Resources,
 	}
 

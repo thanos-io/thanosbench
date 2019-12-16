@@ -61,9 +61,6 @@ spec:
           requests:
             cpu: "1"
             memory: 2Gi
-        securityContext:
-          runAsNonRoot: false
-          runAsUser: 1000
         volumeMounts:
         - mountPath: /data
           name: store-base
