@@ -5,7 +5,7 @@
 [![GoDoc](https://godoc.org/github.com/thanos-io/thanosbench?status.svg)](https://godoc.org/github.com/thanos-io/thanosbench)
 [![Slack](https://img.shields.io/badge/join%20slack-%23thanos-brightgreen.svg)](https://slack.cncf.io/)
 
-Kubernetes Playground for Thanos testing &amp; benchmarking purposes 
+Kubernetes Playground for Thanos testing &amp; benchmarking purposes
 
 ## CLI
 
@@ -41,21 +41,23 @@ Commands:
 
     ./thanosbench block plan -p realistic-k8s-1w-small --labels 'cluster="one"' --max-time 2019-10-18T00:00:00Z | ./thanosbench block gen --output.dir ./genblocks --workers 20
 
+  stress --workers.num=WORKERS.NUM [<target>]
+    Stress tests a remote StoreAPI.
 ```
 
 ## Repo structure:
 
 * `cmds/thanosbench` - single binary for all tools.
 * `config` - mimic-style Go configurations (e.g to deploy Thanos or Prometheus on opinionated Kubernetes)
-* `pkg` - library of non-configuration Go packages. 
+* `pkg` - library of non-configuration Go packages.
 * `benchmarks` - set of benchmarks/tests for different cases/issue/testing aimed currently for kubernetes.
   * `<benchmark name>` - directory for benchmark. All is using [mimic](https://github.com/bwplotka/mimic) for the manifests generation. See [example](/benchmarks/remote-read)
-    * gen-manifests - generated YAMLs. 
+    * gen-manifests - generated YAMLs.
     * tests - directory for all test scripts (preferable in Go).
     * README.md
-    
+
 Use `make gen` to generate `config` templates into `benchmarks`.
-    
+
 ## How to run benchmarks?
 
 ### Prerequisites
@@ -67,22 +69,22 @@ bear in mind that most of the benchmarks are around memory allocations, so it's 
 
 You can do on `default` namespace by running:
 
-`make gen && kubectl apply -f benchmarks/monitor/manifests`    
-    
- For any adjustment, edit [benchmarks/monitor/main.go](https://github.com/thanos-io/thanosbench/blob/db8874ab23f480f33cdb4ac4eeec57562f566dd8/benchmarks/monitor/main.go#L25) or related template. 
+`make gen && kubectl apply -f benchmarks/monitor/manifests`
+
+ For any adjustment, edit [benchmarks/monitor/main.go](https://github.com/thanos-io/thanosbench/blob/db8874ab23f480f33cdb4ac4eeec57562f566dd8/benchmarks/monitor/main.go#L25) or related template.
  `make gen` will generate the YAMLs.
- 
-Prometheus is configured to monitor only the namespace configured in `namespace` argument. With few pods it should took at most 100MB of memory on average. 
- 
+
+Prometheus is configured to monitor only the namespace configured in `namespace` argument. With few pods it should took at most 100MB of memory on average.
+
 3. Forward port to see Prometheus UI: `kubectl port-forward svc/monitor 9090:9090`
- 
+
 `kind` has cadvisor built in and default Prometheus is set to monitor it.
 
 ### Benchmarks
 
 * [Remote read](benchmarks/remote-read/README.md)
 * [Long term storage read path](benchmarks/lts/README.md)
-    
+
 ## Potential next steps
 
 * Mores sophisticated profiles for `block gen`.
