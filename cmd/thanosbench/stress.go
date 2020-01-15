@@ -23,15 +23,15 @@ import (
 func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 	cmd := app.Command("stress", "Stress tests a remote StoreAPI.")
 	workers := cmd.Flag("workers.num", "Number of go routines for stress testing.").Required().Int()
-	target := cmd.Arg("target", "IP:PORT pair of the target to stress.").IP()
-	timeout := cmd.Arg("timeout", "Timeout of each operation").Default("60s").Duration()
-	lookback := cmd.Arg("query.look-back", "How much time into the past at max we should look back").Default("30d").Duration()
+	timeout := cmd.Flag("timeout", "Timeout of each operation").Default("60s").Duration()
+	lookback := cmd.Flag("query.look-back", "How much time into the past at max we should look back").Default("300h").Duration()
+	target := cmd.Arg("target", "IP:PORT pair of the target to stress.").TCP()
 
 	// TODO(GiedriusS): send other requests like Info() as well.
 	// TODO(GiedriusS): we could ask for random aggregations.
 	m["stress"] = func(g *run.Group, logger log.Logger) error {
 		g.Add(func() error {
-			conn, err := grpc.Dial(target.String(), grpc.WithInsecure())
+			conn, err := grpc.Dial((*target).String(), grpc.WithInsecure())
 			if err != nil {
 				return err
 			}
