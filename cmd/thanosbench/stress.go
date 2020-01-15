@@ -72,8 +72,8 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 						min := time.Now().Unix() - rand.Int63n(int64(lookback.Seconds()))
 
 						r, err := c.Series(opCtx, &storepb.SeriesRequest{
-							MinTime: min * int64(time.Millisecond),
-							MaxTime: max * int64(time.Millisecond),
+							MinTime: min * 1000,
+							MaxTime: max * 1000,
 							Matchers: []storepb.LabelMatcher{
 								storepb.LabelMatcher{
 									Type:  storepb.LabelMatcher_EQ,
