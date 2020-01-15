@@ -30,6 +30,7 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 	// TODO(GiedriusS): send other requests like Info() as well.
 	// TODO(GiedriusS): we could ask for random aggregations.
 	m["stress"] = func(g *run.Group, logger log.Logger) error {
+		mainCtx, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {
 			conn, err := grpc.Dial((*target).String(), grpc.WithInsecure())
 			if err != nil {
@@ -38,8 +39,7 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 			defer conn.Close()
 			c := storepb.NewStoreClient(conn)
 
-			lblvlsCtx, cancel := context.WithTimeout(context.Background(), *timeout)
-			defer cancel()
+			lblvlsCtx, _ := context.WithTimeout(mainCtx, *timeout)
 
 			labelvaluesResp, err := c.LabelValues(lblvlsCtx, &storepb.LabelValuesRequest{Label: labels.MetricName})
 			if err != nil {
@@ -53,12 +53,18 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 				return errors.New("the StoreAPI responded with zero metric names")
 			}
 
-			errg, ctx := errgroup.WithContext(context.Background())
+			errg, errCtx := errgroup.WithContext(mainCtx)
 
 			for i := 0; i < *workers; i++ {
 				errg.Go(func() error {
 					for {
-						opCtx, cancel := context.WithTimeout(ctx, *timeout)
+						select {
+						case <-errCtx.Done():
+							return nil
+						default:
+						}
+
+						opCtx, cancel := context.WithTimeout(errCtx, *timeout)
 						defer cancel()
 
 						randomMetric := labelvalues[rand.Intn(len(labelvalues))]
@@ -104,6 +110,7 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 			if err != nil {
 				level.Info(logger).Log("msg", "stress test encountered an error", "err", err.Error())
 			}
+			cancel()
 		})
 		return nil
 	}
