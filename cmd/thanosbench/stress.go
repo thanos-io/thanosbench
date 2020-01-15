@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/prometheus/prometheus/pkg/labels"
@@ -23,8 +24,8 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 	cmd := app.Command("stress", "Stress tests a remote StoreAPI.")
 	workers := cmd.Flag("workers.num", "Number of go routines for stress testing.").Required().Int()
 	target := cmd.Arg("target", "IP:PORT pair of the target to stress.").IP()
-	timeout := cmd.Arg("timeout", "TTimeout in seconds of each operation").Default("60").Int()
-	lookback := cmd.Arg("query.look-back", "How much time into the past at max we should look back").Default("7776000").Int()
+	timeout := cmd.Arg("timeout", "Timeout of each operation").Default("60s").Duration()
+	lookback := cmd.Arg("query.look-back", "How much time into the past at max we should look back").Default("30d").Duration()
 
 	// TODO(GiedriusS): send other requests like Info() as well.
 	// TODO(GiedriusS): we could ask for random aggregations.
@@ -37,7 +38,7 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 			defer conn.Close()
 			c := storepb.NewStoreClient(conn)
 
-			lblvlsCtx, cancel := context.WithTimeout(context.Background(), time.Duration(*timeout)*time.Nanosecond)
+			lblvlsCtx, cancel := context.WithTimeout(context.Background(), *timeout)
 			defer cancel()
 
 			labelvaluesResp, err := c.LabelValues(lblvlsCtx, &storepb.LabelValuesRequest{Label: labels.MetricName})
@@ -56,16 +57,16 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 
 			for i := 0; i < *workers; i++ {
 				g.Go(func() error {
-					opCtx, cancel := context.WithTimeout(ctx, time.Duration(*timeout)*time.Nanosecond)
+					opCtx, cancel := context.WithTimeout(ctx, *timeout)
 					defer cancel()
 
 					randomMetric := labelvalues[rand.Intn(len(labelvalues))]
 					max := time.Now().Unix()
-					min := time.Now().Unix() - rand.Int63n(int64(*lookback))
+					min := time.Now().Unix() - rand.Int63n(int64(lookback.Seconds()))
 
 					r, err := c.Series(opCtx, &storepb.SeriesRequest{
-						MinTime: min * 1000,
-						MaxTime: max * 1000,
+						MinTime: min * int64(time.Millisecond),
+						MaxTime: max * int64(time.Millisecond),
 						Matchers: []storepb.LabelMatcher{
 							storepb.LabelMatcher{
 								Type:  storepb.LabelMatcher_EQ,
@@ -85,7 +86,7 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 						if err == io.EOF {
 							break
 						}
-						if err != nil && err != io.EOF {
+						if err != nil {
 							return err
 						}
 						series := seriesResp.GetSeries()
@@ -100,7 +101,7 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 
 			return g.Wait()
 		}, func(err error) {
-			level.Info(logger).Log("msg", "stress test encountered an error", "err", err.String())
+			level.Info(logger).Log("msg", "stress test encountered an error", "err", err.Error())
 		})
 		return nil
 	}
