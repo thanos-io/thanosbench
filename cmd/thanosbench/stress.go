@@ -101,7 +101,9 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 
 			return g.Wait()
 		}, func(err error) {
-			level.Info(logger).Log("msg", "stress test encountered an error", "err", err.Error())
+			if err != nil {
+				level.Info(logger).Log("msg", "stress test encountered an error", "err", err.Error())
+			}
 		})
 		return nil
 	}
