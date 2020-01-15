@@ -57,41 +57,43 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 
 			for i := 0; i < *workers; i++ {
 				g.Go(func() error {
-					opCtx, cancel := context.WithTimeout(ctx, *timeout)
-					defer cancel()
-
-					randomMetric := labelvalues[rand.Intn(len(labelvalues))]
-					max := time.Now().Unix()
-					min := time.Now().Unix() - rand.Int63n(int64(lookback.Seconds()))
-
-					r, err := c.Series(opCtx, &storepb.SeriesRequest{
-						MinTime: min * int64(time.Millisecond),
-						MaxTime: max * int64(time.Millisecond),
-						Matchers: []storepb.LabelMatcher{
-							storepb.LabelMatcher{
-								Type:  storepb.LabelMatcher_EQ,
-								Name:  labels.MetricName,
-								Value: randomMetric,
-							},
-						},
-						Aggregates: []storepb.Aggr{storepb.Aggr_RAW, storepb.Aggr_COUNTER},
-					}, grpc.MaxCallRecvMsgSize(math.MaxInt32))
-
-					if err != nil {
-						return err
-					}
-
 					for {
-						seriesResp, err := r.Recv()
-						if err == io.EOF {
-							break
-						}
+						opCtx, cancel := context.WithTimeout(ctx, *timeout)
+						defer cancel()
+
+						randomMetric := labelvalues[rand.Intn(len(labelvalues))]
+						max := time.Now().Unix()
+						min := time.Now().Unix() - rand.Int63n(int64(lookback.Seconds()))
+
+						r, err := c.Series(opCtx, &storepb.SeriesRequest{
+							MinTime: min * int64(time.Millisecond),
+							MaxTime: max * int64(time.Millisecond),
+							Matchers: []storepb.LabelMatcher{
+								storepb.LabelMatcher{
+									Type:  storepb.LabelMatcher_EQ,
+									Name:  labels.MetricName,
+									Value: randomMetric,
+								},
+							},
+							Aggregates: []storepb.Aggr{storepb.Aggr_RAW, storepb.Aggr_COUNTER},
+						}, grpc.MaxCallRecvMsgSize(math.MaxInt32))
+
 						if err != nil {
 							return err
 						}
-						series := seriesResp.GetSeries()
-						if series == nil {
-							continue
+
+						for {
+							seriesResp, err := r.Recv()
+							if err == io.EOF {
+								break
+							}
+							if err != nil {
+								return err
+							}
+							series := seriesResp.GetSeries()
+							if series == nil {
+								continue
+							}
 						}
 					}
 
