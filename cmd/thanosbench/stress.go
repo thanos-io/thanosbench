@@ -53,10 +53,10 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 				return errors.New("the StoreAPI responded with zero metric names")
 			}
 
-			g, ctx := errgroup.WithContext(context.Background())
+			errg, ctx := errgroup.WithContext(context.Background())
 
 			for i := 0; i < *workers; i++ {
-				g.Go(func() error {
+				errg.Go(func() error {
 					for {
 						opCtx, cancel := context.WithTimeout(ctx, *timeout)
 						defer cancel()
@@ -96,12 +96,10 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 							}
 						}
 					}
-
-					return nil
 				})
 			}
 
-			return g.Wait()
+			return errg.Wait()
 		}, func(err error) {
 			if err != nil {
 				level.Info(logger).Log("msg", "stress test encountered an error", "err", err.Error())
