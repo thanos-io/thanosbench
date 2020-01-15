@@ -39,7 +39,8 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 			defer conn.Close()
 			c := storepb.NewStoreClient(conn)
 
-			lblvlsCtx, _ := context.WithTimeout(mainCtx, *timeout)
+			lblvlsCtx, lblvlsCancel := context.WithTimeout(mainCtx, *timeout)
+			defer lblvlsCancel()
 
 			labelvaluesResp, err := c.LabelValues(lblvlsCtx, &storepb.LabelValuesRequest{Label: labels.MetricName})
 			if err != nil {
