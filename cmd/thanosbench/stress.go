@@ -90,16 +90,12 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 						}
 
 						for {
-							seriesResp, err := r.Recv()
+							_, err := r.Recv()
 							if err == io.EOF {
 								break
 							}
 							if err != nil {
 								return err
-							}
-							series := seriesResp.GetSeries()
-							if series == nil {
-								continue
 							}
 						}
 					}
