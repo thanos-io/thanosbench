@@ -25,7 +25,7 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 	workers := cmd.Flag("workers.num", "Number of go routines for stress testing.").Required().Int()
 	timeout := cmd.Flag("timeout", "Timeout of each operation").Default("60s").Duration()
 	lookback := cmd.Flag("query.look-back", "How much time into the past at max we should look back").Default("300h").Duration()
-	target := cmd.Arg("target", "IP:PORT pair of the target to stress.").TCP()
+	target := cmd.Arg("target", "IP:PORT pair of the target to stress.").Required().TCP()
 
 	// TODO(GiedriusS): send other requests like Info() as well.
 	// TODO(GiedriusS): we could ask for random aggregations.
