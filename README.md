@@ -41,7 +41,7 @@ Commands:
 
     ./thanosbench block plan -p realistic-k8s-1w-small --labels 'cluster="one"' --max-time 2019-10-18T00:00:00Z | ./thanosbench block gen --output.dir ./genblocks --workers 20
 
-  stress --workers=WORKERS [<flags>] [<target>]
+  stress --workers=WORKERS [<flags>] <target>
     Stress tests a remote StoreAPI.
 ```
 
