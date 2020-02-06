@@ -22,7 +22,7 @@ import (
 
 func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 	cmd := app.Command("stress", "Stress tests a remote StoreAPI.")
-	workers := cmd.Flag("workers.num", "Number of go routines for stress testing.").Required().Int()
+	workers := cmd.Flag("workers", "Number of go routines for stress testing.").Required().Int()
 	timeout := cmd.Flag("timeout", "Timeout of each operation").Default("60s").Duration()
 	lookback := cmd.Flag("query.look-back", "How much time into the past at max we should look back").Default("300h").Duration()
 	target := cmd.Arg("target", "IP:PORT pair of the target to stress.").Required().TCP()
