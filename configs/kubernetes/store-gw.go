@@ -143,7 +143,7 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 			},
 		},
 		VolumeMounts: volumes.VolumesAndMounts{sharedVM, opts.ObjStoreSecret.VolumeAndMount}.VolumeMounts(),
-		Resources: opts.Resources,
+		Resources:    opts.Resources,
 	}
 
 	set := appsv1.StatefulSet{

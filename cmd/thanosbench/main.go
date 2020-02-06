@@ -45,6 +45,7 @@ func main() {
 	cmds := map[string]setupFunc{}
 	registerWalgen(cmds, app)
 	registerBlock(cmds, app)
+	registerStress(cmds, app)
 
 	cmd, err := app.Parse(os.Args[1:])
 	if err != nil {

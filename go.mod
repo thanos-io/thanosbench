@@ -13,6 +13,7 @@ require (
 	github.com/thanos-io/thanos v0.8.1-0.20191015125029-5d107d1c3cdc
 	go.uber.org/automaxprocs v1.2.0
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
+	google.golang.org/grpc v1.22.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190813020757-36bff7324fb7
