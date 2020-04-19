@@ -54,12 +54,12 @@ func (g GenType) Create(random *rand.Rand, mint, maxt int64, opts seriesgen.Char
 	}
 }
 
-func toLabels(lset promlabels.Labels) labels.Labels {
+func toLabels(lset labels.Labels) labels.Labels {
 	return *(*labels.Labels)(unsafe.Pointer(&lset))
 }
 
 type SeriesSpec struct {
-	Labels promlabels.Labels `yaml:"labels"`
+	Labels labels.Labels `yaml:"labels"`
 
 	// Targets multiples labels by given targets.
 	Targets int `yaml:"targets"`
