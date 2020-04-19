@@ -40,7 +40,7 @@ func main() {
 		k8s.GenThanosStoreGateway(generator, k8s.StoreGatewayOpts{
 			Name:      "store-base",
 			Namespace: benchmarks.Namespace,
-			Img:       dockerimage.PublicThanos("v0.7.0"),
+			Img:       dockerimage.PublicThanos("v0.12.0"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -71,12 +71,11 @@ func main() {
 				"s3",
 				"/s3/config",
 			),
-			ReadinessPath: "/metrics",
 		})
 		k8s.GenThanosQuerier(generator, k8s.QuerierOpts{
 			Name:      "query-base",
 			Namespace: benchmarks.Namespace,
-			Img:       dockerimage.PublicThanos("v0.7.0"),
+			Img:       dockerimage.PublicThanos("v0.12.0"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -88,7 +87,6 @@ func main() {
 				},
 			},
 			StoreAPILabelSelector: storeAPILabelSelector,
-			ReadinessPath:         "/metrics",
 		})
 	}
 	{

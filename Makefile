@@ -86,7 +86,7 @@ gen:
 	@echo ">> generating benchmarks configs"
 	@rm -rf benchmarks/**/manifests
 	@go run benchmarks/base/main.go generate
-	@go run benchmarks/lts/main.go generate --tag=v0.8.1
+	@go run benchmarks/lts/main.go generate --tag=v0.12.0
 	@go run benchmarks/remote-read/main.go generate
 
 .PHONY: promu

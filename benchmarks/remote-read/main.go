@@ -16,6 +16,5 @@ func main() {
 	// Make sure to generate at the very end.
 	defer generator.Generate()
 
-	k8s.GenRemoteReadBenchPrometheus(generator, "prometheus", benchmarks.Namespace, dockerimage.PublicPrometheus("v2.12.0"), dockerimage.PublicThanos("v0.7.0"))
-	k8s.GenRemoteReadBenchPrometheus(generator, "prometheus-rr-streamed", benchmarks.Namespace, dockerimage.PublicPrometheus("v2.13.0"), dockerimage.PublicThanos("v0.7.0"))
+	k8s.GenRemoteReadBenchPrometheus(generator, "prometheus", benchmarks.Namespace, dockerimage.PublicPrometheus("v2.17.1"), dockerimage.PublicThanos("v0.12.0"))
 }

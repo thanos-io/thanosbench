@@ -15,7 +15,7 @@ spec:
   template:
     metadata:
       annotations:
-        version: quay.io/thanos/thanos:v0.8.1
+        version: quay.io/thanos/thanos:v0.12.0
       creationTimestamp: null
       labels:
         app: store
@@ -39,7 +39,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/thanos/thanos:v0.8.1
+        image: quay.io/thanos/thanos:v0.12.0
         name: thanos
         ports:
         - containerPort: 19190
