@@ -15,7 +15,7 @@ spec:
   template:
     metadata:
       annotations:
-        version: quay.io/thanos/thanos:v0.12.0
+        version: quay.io/thanos/thanos:v0.12.1
       creationTimestamp: null
       labels:
         app: store-base
@@ -39,7 +39,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/thanos/thanos:v0.12.0
+        image: quay.io/thanos/thanos:v0.12.1
         name: thanos
         ports:
         - containerPort: 19190
@@ -49,7 +49,7 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /metrics
+            path: /-/ready
             port: 19190
           initialDelaySeconds: 120
           successThreshold: 3

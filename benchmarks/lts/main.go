@@ -40,7 +40,7 @@ func main() {
 		k8s.GenThanosStoreGateway(generator, k8s.StoreGatewayOpts{
 			Name:      "store-base",
 			Namespace: benchmarks.Namespace,
-			Img:       dockerimage.PublicThanos("v0.12.0"),
+			Img:       dockerimage.PublicThanos("v0.12.1"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
@@ -75,7 +75,7 @@ func main() {
 		k8s.GenThanosQuerier(generator, k8s.QuerierOpts{
 			Name:      "query-base",
 			Namespace: benchmarks.Namespace,
-			Img:       dockerimage.PublicThanos("v0.12.0"),
+			Img:       dockerimage.PublicThanos("v0.12.1"),
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1"),
