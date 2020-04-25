@@ -32,7 +32,7 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 		Namespace: namespace,
 		Name:      name,
 
-		Img:       dockerimage.PublicPrometheus("v2.17.1"),
+		Img:       dockerimage.PublicPrometheus("v2.17.2"),
 		ThanosImg: dockerimage.PublicThanos("v0.12.1"),
 
 		Resources: corev1.ResourceRequirements{

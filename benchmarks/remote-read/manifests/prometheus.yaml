@@ -35,7 +35,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/prometheus/prometheus:v2.17.1
+        image: quay.io/prometheus/prometheus:v2.17.2
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
