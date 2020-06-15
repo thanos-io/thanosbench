@@ -32,8 +32,8 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 		Namespace: namespace,
 		Name:      name,
 
-		Img:       dockerimage.PublicPrometheus("v2.17.2"),
-		ThanosImg: dockerimage.PublicThanos("v0.12.1"),
+		Img:       dockerimage.PublicPrometheus("v2.19.0"),
+		ThanosImg: dockerimage.PublicThanos("v0.12.2"),
 
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{

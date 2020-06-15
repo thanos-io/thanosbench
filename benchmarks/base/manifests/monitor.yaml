@@ -35,7 +35,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/prometheus/prometheus:v2.17.2
+        image: quay.io/prometheus/prometheus:v2.19.0
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -82,7 +82,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/thanos/thanos:v0.12.1
+        image: quay.io/thanos/thanos:v0.12.2
         imagePullPolicy: Always
         name: thanos
         ports:
