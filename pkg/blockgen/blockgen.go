@@ -13,14 +13,14 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/oklog/ulid"
 	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/tsdb"
+	"github.com/prometheus/prometheus/storage"
 	"github.com/thanos-io/thanos/pkg/block/metadata"
 	"github.com/thanos-io/thanosbench/pkg/seriesgen"
 )
 
 // Writer is interface to write time series into Prometheus blocks.
 type Writer interface {
-	tsdb.Appendable
+	storage.Appendable
 
 	// Flush writes current block to disk.
 	// The block will contain values accumulated by `Write`.

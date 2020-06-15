@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prometheus/prometheus/pkg/timestamp"
-
 	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/tsdb"
+	"github.com/prometheus/prometheus/pkg/timestamp"
+	"github.com/prometheus/prometheus/storage"
+
 	"github.com/thanos-io/thanos/pkg/testutil"
 )
 
@@ -72,7 +72,7 @@ func (a *testAppendable) Rollback() error {
 	return nil
 }
 
-func (a *testAppendable) Appender() tsdb.Appender {
+func (a *testAppendable) Appender() storage.Appender {
 	return a
 }
 

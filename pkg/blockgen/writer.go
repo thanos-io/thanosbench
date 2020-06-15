@@ -3,6 +3,7 @@ package blockgen
 import (
 	"context"
 	"math"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
 	"github.com/prometheus/prometheus/pkg/timestamp"
+	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/tsdb"
 	"github.com/prometheus/prometheus/tsdb/chunkenc"
 )
@@ -65,7 +67,7 @@ func NewTSDBBlockWriter(logger log.Logger, dir string) (*BlockWriter, error) {
 }
 
 // Appender is not thread-safe. Returned Appender is thread-save however..
-func (w *BlockWriter) Appender() tsdb.Appender {
+func (w *BlockWriter) Appender() storage.Appender {
 	return w.head.Appender()
 }
 
@@ -96,7 +98,8 @@ func (w *BlockWriter) initHeadAndAppender() error {
 	//    var w *wal.WAL = nil
 	// Put huge chunkRange; It has to be equal then expected block size.
 	// Since we don't have info about block size here, set it to large number.
-	h, err := tsdb.NewHead(nil, logger, nil, durToMilis(9999*time.Hour))
+	chunksDir := filepath.Join(w.dir, "chunks")
+	h, err := tsdb.NewHead(nil, logger, nil, durToMilis(9999*time.Hour), chunksDir, nil, tsdb.DefaultStripeSize, nil)
 	if err != nil {
 		return errors.Wrap(err, "tsdb.NewHead")
 	}
