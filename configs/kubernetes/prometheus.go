@@ -249,8 +249,8 @@ type PrometheusOpts struct {
 	Resources corev1.ResourceRequirements
 
 	// If empty, no data autogeneration will be defined.
-	BlockgenConfig *walgen.Config
-	BlockgenImg    dockerimage.Image
+	WalGenConfig *walgen.Config
+	WalGenImg    dockerimage.Image
 
 	ThanosImg       dockerimage.Image
 	ThanosResources corev1.ResourceRequirements
@@ -454,15 +454,15 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 	}
 
 	var initContainers []corev1.Container
-	if opts.BlockgenConfig != nil {
+	if opts.WalGenConfig != nil {
 		initContainers = append(initContainers, corev1.Container{
-			Name:    "blockgen",
-			Image:   opts.BlockgenImg.String(),
+			Name:    "walgen",
+			Image:   opts.WalGenImg.String(),
 			Command: []string{"/bin/thanosbench"},
 			Args: []string{
-				"blockgen",
-				fmt.Sprintf("--config=%s", string(genInPlace(encoding.JSON(*opts.BlockgenConfig)))),
-				fmt.Sprintf("--output-dir=%s", promDataPath),
+				"walgen",
+				fmt.Sprintf("--config=%s", string(genInPlace(encoding.JSON(*opts.WalGenConfig)))),
+				fmt.Sprintf("--output.dir=%s", promDataPath),
 			},
 			VolumeMounts: []corev1.VolumeMount{sharedVM.VolumeMount},
 			Resources: corev1.ResourceRequirements{
