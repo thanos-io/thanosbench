@@ -3,6 +3,7 @@
 /prometheus
 /thanosbench
 /vendor/
+autogendocs
 
 # Ignore minikube setup working dirs.
 kube/bin

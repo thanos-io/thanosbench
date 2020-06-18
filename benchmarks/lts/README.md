@@ -15,14 +15,14 @@ For now it is used for adhoc hacking and benchmarking.
   * Prepare Thanos YAML objstore configuration: [see this doc](https://thanos.io/storage.md/#configuration)
   * Add the yaml as a secret to your K8s cluster
   * Change accordingly the [go definitions](main.go) and run `make gen` or `go run benchmarks/lts/main.go generate --tag=<thanos quay image tag>`
-  
+
 ## Usage
 
 * Generate YAMLs from definitions:
   * `make gen` or `go run benchmarks/lts/main.go generate --tag=<thanos quay image tag>` any time to regenerate the output YAMLs.
 
 You should see [2 Store GW and 2 Queries](/benchmarks/lts/manifests).
- 
+
 One Path can be used as a baseline, second can be used to test differences across versions.
 
 * Generate test dataset
@@ -57,7 +57,7 @@ Dataset mentioned above use roughly 12MB baseline memory.
 
 * Forward Querier port:
   * `kubectl port-forward pod/$(kubectl get po | grep query | cut -f1 -d " ") 19190:19190`
-  
+
 * Use Querier to query long term storage. Note that for above dataset you need to query before `2019-10-18T00:00:00Z`:
 
 For example:
@@ -72,7 +72,7 @@ This fetches 5k series over few days. This for current version takes around 120M
 
 http://localhost:9090/graph?g0.range_input=1h&g0.expr=sum(container_memory_working_set_bytes%7Bpod%3D~%22store.*%7Cquery.*%22%2C%20container!%3D%22%22%7D)%20by%20(pod%2C%20container)&g0.tab=0&g1.range_input=1h&g1.expr=go_memstats_alloc_bytes%7Bpod%3D~%22store.*%7Cquery.*%22%7D&g1.tab=0&g2.range_input=1h&g2.expr=%20sum(rate(container_cpu_user_seconds_total%7Bpod%3D~%22store.*%7Cquery.*%22%2C%20container!%3D%22%22%7D%5B5m%5D))%20by%20(pod%2C%20container)&g2.tab=0&g3.range_input=1h&g3.expr=go_memstats_mspan_inuse_bytes%7Bpod%3D~%22store.*%7Cquery.*%22%7D&g3.tab=0&g4.range_input=1h&g4.expr=sum(container_memory_mapped_file%7Bpod%3D~%22store.*%7Cquery.*%22%2C%20container!%3D%22%22%7D)%20by%20(pod%2C%20container)%20&g4.tab=0
 
-### Block/Series 
+### Block/Series
 
 http://localhost:9090/graph?g0.range_input=1h&g0.expr=sum(increase(thanos_objstore_bucket_operations_total%5B5m%5D))%20by%20(operation%2C%20instance%2C%20pod)%20&g0.tab=0&g1.range_input=30m&g1.expr=(sum(increase(thanos_bucket_store_series_data_size_fetched_bytes_sum%5B5m%5D)%20%2F%0Aincrease(thanos_bucket_store_series_data_size_fetched_bytes_count%5B5m%5D))%20without%20(data_type))%20%2F%20increase(thanos_bucket_store_series_blocks_queried_sum%5B5m%5D)&g1.tab=0&g2.range_input=30m&g2.expr=increase(thanos_bucket_store_series_data_size_fetched_bytes_sum%5B5m%5D)%20%2F%0Aincrease(thanos_bucket_store_series_data_size_fetched_bytes_count%5B5m%5D)&g2.tab=0&g3.range_input=1h&g3.expr=increase(thanos_bucket_store_series_data_size_fetched_bytes_sum%5B5m%5D)&g3.tab=0&g4.range_input=30m&g4.expr=histogram_quantile(0.95%2C%20sum(rate(thanos_objstore_bucket_operation_duration_seconds_bucket%5B1m%5D))%20by%20(operation%2C%20instance%2C%20pod%2C%20le))&g4.tab=0&g5.range_input=1h&g5.expr=increase(thanos_bucket_store_series_blocks_queried_sum%5B5m%5D)&g5.tab=0
 

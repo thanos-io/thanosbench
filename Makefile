@@ -1,3 +1,5 @@
+include .bingo/Variables.mk
+
 PREFIX            ?= $(shell pwd)
 FILES_TO_FMT      ?= $(shell find . -path ./vendor -prune -o -name '*.go' -print)
 
@@ -16,37 +18,10 @@ GOPROXY           ?= https://proxy.golang.org
 export GOPROXY
 
 GIT               ?= $(shell which git)
-GOIMPORTS         ?= $(GOBIN)/goimports-$(GOIMPORTS_VERSION)
-GOIMPORTS_VERSION ?= 9d4d845e86f14303813298ede731a971dd65b593
-GOLANGCILINT_VERSION ?= d2b1eea2c6171a1a1141a448a745335ce2e928a1
-GOLANGCILINT         ?= $(GOBIN)/golangci-lint-$(GOLANGCILINT_VERSION)
-MISSPELL_VERSION     ?= c0b55c8239520f6b5aa15a0207ca8b28027ba49e
-MISSPELL             ?= $(GOBIN)/misspell-$(MISSPELL_VERSION)
-PROMU             ?= $(GOBIN)/promu-$(PROMU_VERSION)
-PROMU_VERSION     ?= 9583e5a6448f97c6294dca72dd1d173e28f8d4a4
 
-# fetch_go_bin_version downloads (go gets) the binary from specific version and installs it in $(GOBIN)/<bin>-<version>
-# arguments:
-# $(1): Install path. (e.g github.com/campoy/embedmd)
-# $(2): Tag or revision for checkout.
-# TODO(bwplotka): Move to just using modules, however make sure to not use or edit Thanos go.mod file!
-define fetch_go_bin_version
-	@mkdir -p $(GOBIN)
-	@mkdir -p $(TMP_GOPATH)
-
-	@echo ">> fetching $(1)@$(2) revision/version"
-	@if [ ! -d '$(TMP_GOPATH)/src/$(1)' ]; then \
-    GOPATH='$(TMP_GOPATH)' GO111MODULE='off' go get -d -u '$(1)/...'; \
-  else \
-    CDPATH='' cd -- '$(TMP_GOPATH)/src/$(1)' && git fetch; \
-  fi
-	@CDPATH='' cd -- '$(TMP_GOPATH)/src/$(1)' && git checkout -f -q '$(2)'
-	@echo ">> installing $(1)@$(2)"
-	@GOBIN='$(TMP_GOPATH)/bin' GOPATH='$(TMP_GOPATH)' GO111MODULE='off' go install '$(1)'
-	@mv -- '$(TMP_GOPATH)/bin/$(shell basename $(1))' '$(GOBIN)/$(shell basename $(1))-$(2)'
-	@echo ">> produced $(GOBIN)/$(shell basename $(1))-$(2)"
-
-endef
+# Support gsed on OSX (installed via brew), falling back to sed. On Linux
+# systems gsed won't be installed, so will use sed as expected.
+SED ?= $(shell which gsed 2>/dev/null || which sed)
 
 define require_clean_work_tree
 	@git update-index -q --ignore-submodules --refresh
@@ -132,6 +107,12 @@ else
 	@echo >&2 "No git binary found."; exit 1
 endif
 
+.PHONY: docs
+docs: ## Regenerates flags in docs for all thanos commands.
+docs: $(EMBEDMD) build
+	@EMBEDMD_BIN="$(EMBEDMD)" SED_BIN="$(SED)" THANOSBENCH_BIN="./thanosbench" scripts/genflagdocs.sh
+	@find . -type f -name "*.md" | SED_BIN="$(SED)" xargs scripts/cleanup-white-noise.sh
+
 .PHONY: lint
 # PROTIP:
 # Add
@@ -139,9 +120,9 @@ endif
 #      --mem-profile-path string   Path to memory profile output file
 #
 # to debug big allocations during linting.
-lint: check-git $(GOLANGCILINT) $(MISSPELL)
+lint: check-git $(GOLANGCI_LINT) $(MISSPELL)
 	@echo ">> linting all of the Go files GOGC=${GOGC}"
-	@$(GOLANGCILINT) run --enable goimports --enable goconst --skip-dirs vendor
+	@$(GOLANGCI_LINT) run --enable goimports --enable goconst --skip-dirs vendor
 	@echo ">> detecting misspells"
 	@find . -type f | grep -v vendor/ | grep -vE '\./\..*' | xargs $(MISSPELL) -error
 
@@ -156,16 +137,3 @@ check-comments:
 test:
 	@echo ">> running tests"
 	@go test ./...
-
-$(PROMU):
-	$(call fetch_go_bin_version,github.com/prometheus/promu,$(PROMU_VERSION))
-
-# non-phony targets
-$(GOIMPORTS):
-	$(call fetch_go_bin_version,golang.org/x/tools/cmd/goimports,$(GOIMPORTS_VERSION))
-
-$(MISSPELL):
-	$(call fetch_go_bin_version,github.com/client9/misspell/cmd/misspell,$(MISSPELL_VERSION))
-
-$(GOLANGCILINT):
-	$(call fetch_go_bin_version,github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCILINT_VERSION))

@@ -6,15 +6,13 @@ import (
 	"math/rand"
 	"path"
 	"time"
-	"unsafe"
 
 	"github.com/pkg/errors"
 
 	"github.com/go-kit/kit/log"
 	"github.com/oklog/ulid"
-	promlabels "github.com/prometheus/prometheus/pkg/labels"
+	"github.com/prometheus/prometheus/pkg/labels"
 	"github.com/prometheus/prometheus/tsdb"
-	"github.com/prometheus/prometheus/tsdb/labels"
 	"github.com/thanos-io/thanos/pkg/block/metadata"
 	"github.com/thanos-io/thanosbench/pkg/seriesgen"
 )
@@ -55,12 +53,8 @@ func (g GenType) Create(random *rand.Rand, mint, maxt int64, opts seriesgen.Char
 	}
 }
 
-func toLabels(lset promlabels.Labels) labels.Labels {
-	return *(*labels.Labels)(unsafe.Pointer(&lset))
-}
-
 type SeriesSpec struct {
-	Labels promlabels.Labels `yaml:"labels"`
+	Labels labels.Labels `yaml:"labels"`
 
 	// Targets multiples labels by given targets.
 	Targets int `yaml:"targets"`
@@ -126,7 +120,7 @@ func (s *blockSeriesSet) Next() bool {
 	}
 
 	series := s.config.Series[s.i-1]
-	lset := labels.Labels(append([]labels.Label{{Name: "__blockgen_target__", Value: fmt.Sprintf("%v", s.target)}}, toLabels(series.Labels)...))
+	lset := labels.Labels(append([]labels.Label{{Name: "__blockgen_target__", Value: fmt.Sprintf("%v", s.target)}}, series.Labels...))
 
 	// Stable random per series name.
 	iter, err := series.Type.Create(

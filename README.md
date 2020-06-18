@@ -7,43 +7,191 @@
 
 Kubernetes Playground for Thanos testing &amp; benchmarking purposes
 
-## CLI
+## thanosbench
 
-This repo adds additional tooling for benchmarks. See possible subcommands here:
+This repo adds additional tooling for benchmarks.
 
-See `make build && ./thanosbench --help` for available commands.
+See `make build && ./thanosbench --help` for available commands or read below:
 
-```
-usage: thanosbench [<flags>] <command> [<args> ...]
+### WAL generation
 
-Benchmarking tools for Thanos
+[embedmd]:# (autogendocs/flags_walgen.txt)
+```txt
+usage: thanosbench walgen --output.dir=OUTPUT.DIR [<flags>]
+
+Generates TSDB data into WAL files.
 
 Flags:
-  -h, --help               Show context-sensitive help (also try --help-long and --help-man).
+  -h, --help                     Show context-sensitive help (also try
+                                 --help-long and --help-man).
+      --version                  Show application version.
+      --log.level=info           Log filtering level.
+      --log.format=logfmt        Log format to use.
+      --config-file=<file-path>  Path to YAML for series config. See
+                                 walgen.Config for the format.
+      --config=<content>         Alternative to 'config-file' flag (lower
+                                 priority). Content of YAML for series config.
+                                 See walgen.Config for the format.
+      --output.dir=OUTPUT.DIR    Output directory for generated TSDB data.
+
+```
+
+Config format:
+
+[embedmd]:# (autogendocs/config_walgen.txt)
+```txt
+inputseries:
+- type: ""
+  characteristics:
+    jitter: 0
+    scrapeInterval: 0s
+    changeInterval: 0s
+    max: 0
+    min: 0
+  result:
+    resulttype: 0
+    result:
+    - metric: {}
+      value: 0
+      timestamp: 0
+  replicate: 0
+retention: 0s
+scrapeinterval: 0s
+```
+
+For example:
+
+```yaml
+inputseries:
+- type: "gauge"
+  characteristics:
+    jitter: 20
+    scrapeInterval: 15000000000
+    changeInterval: 3600000000000
+    max: 200000000
+    min: 100000000
+  result:
+    resultType: "vector"
+    result:
+      - metric:
+          __name__: "kube_pod_container_resource_limits_memory_bytes"
+          cluster: "eu1"
+          container: "addon-resizer"
+          instance: "172.17.0.9:8080"
+          job: "kube-state-metrics"
+          namespace: "kube-system"
+          node: "node1"
+          pod: "kube-state-metrics-68f6cc566c-vp566"
+        value: 1
+        timestamp: 0
+  replicate: 2
+retention: 3600
+scrapeinterval: 15
+
+```
+
+### Block plan & gen
+
+[embedmd]:# (autogendocs/flags_block_plan.txt)
+```txt
+usage: thanosbench block plan --profile=PROFILE --labels=<name>="<value>" [<flags>]
+
+Plan generates blocks specs used by blockgen command to build blocks.
+
+Example plan with generation:
+
+./thanosbench block plan -p <profile> --labels 'cluster="one"' --max-time
+2019-10-18T00:00:00Z | ./thanosbench block gen --output.dir ./genblocks
+--workers 20
+
+Flags:
+  -h, --help               Show context-sensitive help (also try --help-long and
+                           --help-man).
       --version            Show application version.
       --log.level=info     Log filtering level.
       --log.format=logfmt  Log format to use.
+  -p, --profile=PROFILE    Name of the harcoded profile to use
+      --max-time=30m       If empty current time - 30m (usual consistency delay)
+                           is used.
+      --labels=<name>="<value>" ...
+                           External labels for block stream (repeated).
 
-Commands:
-  help [<command>...]
-    Show help.
-
-  walgen --output.dir=OUTPUT.DIR [<flags>]
-    Generates TSDB data into WAL files.
-
-  block gen --output.dir=OUTPUT.DIR [<flags>]
-    Generates Prometheus/Thanos TSDB blocks from input. Expects []blockgen.BlockSpec in YAML format as input.
-
-  block plan --profile=PROFILE --labels=<name>="<value>" [<flags>]
-    Plan generates blocks specs used by blockgen command to build blocks.
-
-    Example plan with generation:
-
-    ./thanosbench block plan -p realistic-k8s-1w-small --labels 'cluster="one"' --max-time 2019-10-18T00:00:00Z | ./thanosbench block gen --output.dir ./genblocks --workers 20
-
-  stress --workers=WORKERS [<flags>] <target>
-    Stress tests a remote StoreAPI.
 ```
+
+Above outputs []blockgen.BlockSpec:
+
+[embedmd]:# (autogendocs/config_blockspec.txt)
+```txt
+- meta:
+    blockmeta:
+      ulid: "00000000000000000000000000"
+      mintime: 0
+      maxtime: 0
+      stats:
+        numsamples: 0
+        numseries: 0
+        numchunks: 0
+        numtombstones: 0
+      compaction:
+        level: 0
+        sources: []
+        deletable: false
+        parents: []
+        failed: false
+      version: 0
+    thanos:
+      labels: {}
+      downsample:
+        resolution: 0
+      source: ""
+  series: []
+```
+
+Then block gen accepts this as input:
+
+[embedmd]:# (autogendocs/flags_block_gen.txt)
+```txt
+usage: thanosbench block gen --output.dir=OUTPUT.DIR [<flags>]
+
+Generates Prometheus/Thanos TSDB blocks from input. Expects []blockgen.BlockSpec
+in YAML format as input.
+
+Flags:
+  -h, --help                   Show context-sensitive help (also try --help-long
+                               and --help-man).
+      --version                Show application version.
+      --log.level=info         Log filtering level.
+      --log.format=logfmt      Log format to use.
+      --output.dir=OUTPUT.DIR  Output directory for generated data.
+      --workers=WORKERS        Number of go routines for block generation. If 0,
+                               2*runtime.GOMAXPROCS(0) is used.
+
+```
+
+### Stress
+
+[embedmd]:# (autogendocs/flags_stress.txt)
+```txt
+usage: thanosbench stress --workers=WORKERS [<flags>] <target>
+
+Stress tests a remote StoreAPI.
+
+Flags:
+  -h, --help                  Show context-sensitive help (also try --help-long
+                              and --help-man).
+      --version               Show application version.
+      --log.level=info        Log filtering level.
+      --log.format=logfmt     Log format to use.
+      --workers=WORKERS       Number of go routines for stress testing.
+      --timeout=60s           Timeout of each operation
+      --query.look-back=300h  How much time into the past at max we should look
+                              back
+
+Args:
+  <target>  IP:PORT pair of the target to stress.
+
+```
+
 
 ## Repo structure:
 
