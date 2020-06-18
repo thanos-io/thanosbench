@@ -2,7 +2,7 @@
 
 This definition contains Prometheus statefulsets definitions set up to test remote read changes described [here](https://docs.google.com/document/d/1JqrU3NjM9HoGLSTPYOvR217f5HBKBiJTqikEB9UiJL0/edit#).
 
-[@bwplotka](https://bwplotka.dev/) is using those to benchmark new remote read with Thanos sidecar on live Kubernetes cluster.  
+[@bwplotka](https://bwplotka.dev/) is using those to benchmark new remote read with Thanos sidecar on live Kubernetes cluster.
 
 ## Requirements
 
@@ -32,7 +32,7 @@ NOTE: because of init container generating data - init can take few minutes and 
   * This performs heavy queries (query all) against Thanos gRPC Store.Series of sidecar which will proxy
 requests as remote read to Prometheus
   * `bash ./benchmarks/remote-read/test/test.sh localhost:1234`
-  
+
 * See resource consumption based on requests (assuming your `monitor` Prometheus is running on localhost:9090)
 
 http://localhost:9090/graph?g0.range_input=1h&g0.expr=sum(container_memory_working_set_bytes%7Bpod%3D~%22prometheus.*%22%2C%20container!%3D%22%22%7D)%20by%20(container)&g0.tab=0&g1.range_input=1h&g1.expr=go_memstats_alloc_bytes%7Bpod%3D~%22prometheus.*%22%7D&g1.tab=0&g2.range_input=1h&g2.expr=sum(rate(container_cpu_user_seconds_total%7Bpod%3D~%22prometheus.*%22%2C%20container!%3D%22%22%7D%5B5m%5D))%20by%20(container)&g2.tab=0

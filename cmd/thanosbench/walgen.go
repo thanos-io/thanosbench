@@ -8,11 +8,12 @@ import (
 	"github.com/thanos-io/thanos/pkg/extflag"
 	"github.com/thanos-io/thanosbench/pkg/walgen"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/yaml.v2"
 )
 
 func registerWalgen(m map[string]setupFunc, app *kingpin.Application) {
 	cmd := app.Command("walgen", "Generates TSDB data into WAL files.")
-	config := extflag.RegisterPathOrContent(cmd, "config", "YAML for series config", true)
+	config := extflag.RegisterPathOrContent(cmd, "config", "YAML for series config. See walgen.Config for the format.", true)
 
 	outputDir := cmd.Flag("output.dir", "Output directory for generated TSDB data.").Required().String()
 
@@ -26,8 +27,11 @@ func registerWalgen(m map[string]setupFunc, app *kingpin.Application) {
 			if err := os.RemoveAll(*outputDir); err != nil {
 				return err
 			}
-
-			return walgen.GenerateTSDB(logger, *outputDir, configContent)
+			var config walgen.Config
+			if err := yaml.Unmarshal(configContent, &config); err != nil {
+				return err
+			}
+			return walgen.GenerateTSDBWAL(logger, *outputDir, config)
 		}, func(error) {})
 		return nil
 	}

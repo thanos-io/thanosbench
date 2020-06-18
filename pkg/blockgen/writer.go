@@ -96,7 +96,7 @@ func (w *BlockWriter) initHeadAndAppender() error {
 	//    var w *wal.WAL = nil
 	// Put huge chunkRange; It has to be equal then expected block size.
 	// Since we don't have info about block size here, set it to large number.
-	h, err := tsdb.NewHead(nil, logger, nil, durToMilis(9999*time.Hour))
+	h, err := tsdb.NewHead(nil, logger, nil, durToMilis(9999*time.Hour), tsdb.DefaultStripeSize)
 	if err != nil {
 		return errors.Wrap(err, "tsdb.NewHead")
 	}

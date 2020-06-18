@@ -3,7 +3,7 @@ jobs:
   test:
     docker:
      # Build by Thanos make docker-ci
-      - image: quay.io/thanos/thanos-ci:v0.1.0
+      - image: quay.io/thanos/thanos-ci:v1.2-go1.14.2-node  
     working_directory: /go/src/github.com/thanos-io/thanosbench
     environment:
       GO111MODULE: 'on'
@@ -20,6 +20,7 @@ jobs:
             version: 17.07.0-ce
       - run: make deps
       - run: make build
+      - run: make docs
       - run: make lint
       - run: make format
       - run: make test

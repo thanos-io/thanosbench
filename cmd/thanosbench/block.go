@@ -11,27 +11,26 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	promModel "github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/pkg/labels"
 	"github.com/thanos-io/thanos/pkg/model"
-	"gopkg.in/yaml.v2"
-
-	"github.com/go-kit/kit/log"
-	"github.com/oklog/run"
 	"github.com/thanos-io/thanosbench/pkg/blockgen"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/yaml.v2"
 )
 
-func milisToDur(t int64) time.Duration {
+func millisToDur(t int64) time.Duration {
 	return time.Duration(t * int64(time.Millisecond))
 }
 
 func printBlocks(bts ...blockgen.BlockSpec) string {
 	var msg []string
 	for _, b := range bts {
-		msg = append(msg, fmt.Sprintf("[%d - %d](%s) ", b.MinTime, b.MaxTime, milisToDur(b.MaxTime-b.MinTime).String()))
+		msg = append(msg, fmt.Sprintf("[%d - %d](%s) ", b.MinTime, b.MaxTime, millisToDur(b.MaxTime-b.MinTime).String()))
 	}
 	return strings.Join(msg, ",")
 }
@@ -108,7 +107,7 @@ func registerBlockPlan(m map[string]setupFunc, root *kingpin.CmdClause) {
 Example plan with generation:
 
 ./thanosbench block plan -p <profile> --labels 'cluster="one"' --max-time 2019-10-18T00:00:00Z | ./thanosbench block gen --output.dir ./genblocks --workers 20`)
-	profile := cmd.Flag("profile", fmt.Sprintf("Name of the harcoded profile to use")).Required().Short('p').Enum(blockgen.Profiles.Keys()...)
+	profile := cmd.Flag("profile", "Name of the harcoded profile to use").Required().Short('p').Enum(blockgen.Profiles.Keys()...)
 	maxTime := model.TimeOrDuration(cmd.Flag("max-time", "If empty current time - 30m (usual consistency delay) is used.").Default("30m"))
 	extLset := cmd.Flag("labels", "External labels for block stream (repeated).").PlaceHolder("<name>=\"<value>\"").Required().Strings()
 	m["block plan"] = func(g *run.Group, _ log.Logger) error {
