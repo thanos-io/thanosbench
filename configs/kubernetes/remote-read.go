@@ -30,9 +30,9 @@ func GenRemoteReadBenchPrometheus(gen *mimic.Generator, name string, namespace s
 				},
 			},
 		},
-		BlockgenImg: dockerimage.Image{Organization: "quay.io/thanos", Project: "thanosbench", Version: "docker-2019-10-04-19e823a"},
+		WalGenImg: dockerimage.Image{Organization: "quay.io/thanos", Project: "thanosbench", Version: "docker-2019-10-04-19e823a"},
 		// Generate 10k series of type gauge on start.
-		BlockgenConfig: &walgen.Config{
+		WalGenConfig: &walgen.Config{
 			InputSeries: []walgen.Series{
 				{
 					Type: "gauge",

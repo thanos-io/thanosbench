@@ -109,7 +109,7 @@ spec:
           name: prometheus
       initContainers:
       - args:
-        - blockgen
+        - walgen
         - |-
           --config={
             "InputSeries": [
@@ -149,11 +149,11 @@ spec:
             "Retention": 36000000000000,
             "ScrapeInterval": 0
           }
-        - --output-dir=/data-shared/prometheus
+        - --output.dir=/data-shared/prometheus
         command:
         - /bin/thanosbench
         image: quay.io/thanos/thanosbench:docker-2019-10-04-19e823a
-        name: blockgen
+        name: walgen
         resources:
           limits:
             cpu: "1"
