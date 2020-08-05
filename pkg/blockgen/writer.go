@@ -113,8 +113,7 @@ func (w *BlockWriter) writeHeadToDisk() (ulid.ULID, error) {
 	}
 
 	seriesCount := w.head.NumSeries()
-
-	if w.head.NumSeries() == 0 {
+	if seriesCount == 0 {
 		return ulid.ULID{}, errors.New("no series appended; aborting.")
 	}
 

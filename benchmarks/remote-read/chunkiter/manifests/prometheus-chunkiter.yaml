@@ -1,0 +1,390 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  creationTimestamp: null
+  labels:
+    app: prometheus-chunkiter
+  name: prometheus-chunkiter
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-chunkiter
+  serviceName: prometheus-chunkiter
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: prometheus-chunkiter
+    spec:
+      containers:
+      - args:
+        - --config.file=/etc/prometheus/prometheus.yaml
+        - --log.level=info
+        - --storage.remote.read-concurrent-limit=99999
+        - --storage.remote.read-sample-limit=9999999999999999
+        - --storage.tsdb.path=/data-shared/prometheus
+        - --storage.tsdb.min-block-duration=2h
+        - --storage.tsdb.max-block-duration=2h
+        - --storage.tsdb.retention.time=999d
+        - --web.enable-lifecycle
+        - --web.enable-admin-api
+        env:
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: quay.io/thanos/prometheus:pre-2.21-118aeab02
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+        name: prometheus
+        ports:
+        - containerPort: 9090
+          name: http
+        readinessProbe:
+          httpGet:
+            path: -/ready
+            port: 9090
+          successThreshold: 3
+        resources:
+          limits:
+            cpu: "1"
+            memory: 5Gi
+          requests:
+            cpu: "1"
+            memory: 5Gi
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 1000
+        volumeMounts:
+        - mountPath: /etc/prometheus
+          name: prometheus-chunkiter-config
+        - mountPath: /data-shared
+          name: prometheus-chunkiter
+      - args:
+        - sidecar
+        - --log.level=debug
+        - --debug.name=$(POD_NAME)
+        - --http-address=0.0.0.0:19190
+        - --grpc-address=0.0.0.0:19090
+        - --prometheus.url=http://localhost:9090
+        - --tsdb.path=/data-shared/prometheus
+        command:
+        - thanos
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: quay.io/thanos/thanos:v0.14.0
+        imagePullPolicy: Always
+        name: thanos
+        ports:
+        - containerPort: 19190
+          name: m-sidecar
+        - containerPort: 19090
+          name: grpc-sidecar
+        readinessProbe:
+          httpGet:
+            path: metrics
+            port: 19190
+        resources:
+          limits:
+            cpu: "1"
+            memory: 5Gi
+          requests:
+            cpu: "1"
+            memory: 5Gi
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 1000
+        volumeMounts:
+        - mountPath: /data-shared
+          name: prometheus-chunkiter
+      initContainers:
+      - args:
+        - block
+        - gen
+        - |
+          --config=- meta:
+              blockmeta:
+                ulid: "00000000000000000000000000"
+                mintime: 1596614400000
+                maxtime: 1596621600000
+                stats:
+                  numsamples: 0
+                  numseries: 0
+                  numchunks: 0
+                  numtombstones: 0
+                compaction:
+                  level: 1
+                  sources: []
+                  deletable: false
+                  parents: []
+                  failed: false
+                version: 1
+              thanos:
+                labels: {}
+                downsample:
+                  resolution: 0
+                source: ""
+            series:
+            - labels:
+                __name__: my_metric
+                a: "1"
+              targets: 1000
+              type: GAUGE
+              mintime: 1596614400000
+              maxtime: 1596621600000
+              jitter: 3e+07
+              scrapeInterval: 15s
+              changeInterval: 1h0m0s
+              max: 2e+08
+              min: 1e+07
+          - meta:
+              blockmeta:
+                ulid: "00000000000000000000000000"
+                mintime: 1596535200000
+                maxtime: 1596614399999
+                stats:
+                  numsamples: 0
+                  numseries: 0
+                  numchunks: 0
+                  numtombstones: 0
+                compaction:
+                  level: 1
+                  sources: []
+                  deletable: false
+                  parents: []
+                  failed: false
+                version: 1
+              thanos:
+                labels: {}
+                downsample:
+                  resolution: 0
+                source: ""
+            series:
+            - labels:
+                __name__: my_metric
+                a: "1"
+              targets: 1000
+              type: GAUGE
+              mintime: 1596535200000
+              maxtime: 1596614399999
+              jitter: 3e+07
+              scrapeInterval: 15s
+              changeInterval: 1h0m0s
+              max: 2e+08
+              min: 1e+07
+          - meta:
+              blockmeta:
+                ulid: "00000000000000000000000000"
+                mintime: 1596448800000
+                maxtime: 1596535199999
+                stats:
+                  numsamples: 0
+                  numseries: 0
+                  numchunks: 0
+                  numtombstones: 0
+                compaction:
+                  level: 1
+                  sources: []
+                  deletable: false
+                  parents: []
+                  failed: false
+                version: 1
+              thanos:
+                labels: {}
+                downsample:
+                  resolution: 0
+                source: ""
+            series:
+            - labels:
+                __name__: my_metric
+                a: "1"
+              targets: 1000
+              type: GAUGE
+              mintime: 1596448800000
+              maxtime: 1596535199999
+              jitter: 3e+07
+              scrapeInterval: 15s
+              changeInterval: 1h0m0s
+              max: 2e+08
+              min: 1e+07
+          - meta:
+              blockmeta:
+                ulid: "00000000000000000000000000"
+                mintime: 1596362400000
+                maxtime: 1596448799999
+                stats:
+                  numsamples: 0
+                  numseries: 0
+                  numchunks: 0
+                  numtombstones: 0
+                compaction:
+                  level: 1
+                  sources: []
+                  deletable: false
+                  parents: []
+                  failed: false
+                version: 1
+              thanos:
+                labels: {}
+                downsample:
+                  resolution: 0
+                source: ""
+            series:
+            - labels:
+                __name__: my_metric
+                a: "1"
+              targets: 1000
+              type: GAUGE
+              mintime: 1596362400000
+              maxtime: 1596448799999
+              jitter: 3e+07
+              scrapeInterval: 15s
+              changeInterval: 1h0m0s
+              max: 2e+08
+              min: 1e+07
+          - meta:
+              blockmeta:
+                ulid: "00000000000000000000000000"
+                mintime: 1596016800000
+                maxtime: 1596362399999
+                stats:
+                  numsamples: 0
+                  numseries: 0
+                  numchunks: 0
+                  numtombstones: 0
+                compaction:
+                  level: 1
+                  sources: []
+                  deletable: false
+                  parents: []
+                  failed: false
+                version: 1
+              thanos:
+                labels: {}
+                downsample:
+                  resolution: 0
+                source: ""
+            series:
+            - labels:
+                __name__: my_metric
+                a: "1"
+              targets: 1000
+              type: GAUGE
+              mintime: 1596016800000
+              maxtime: 1596362399999
+              jitter: 3e+07
+              scrapeInterval: 15s
+              changeInterval: 1h0m0s
+              max: 2e+08
+              min: 1e+07
+          - meta:
+              blockmeta:
+                ulid: "00000000000000000000000000"
+                mintime: 1595412000000
+                maxtime: 1596016799999
+                stats:
+                  numsamples: 0
+                  numseries: 0
+                  numchunks: 0
+                  numtombstones: 0
+                compaction:
+                  level: 1
+                  sources: []
+                  deletable: false
+                  parents: []
+                  failed: false
+                version: 1
+              thanos:
+                labels: {}
+                downsample:
+                  resolution: 0
+                source: ""
+            series:
+            - labels:
+                __name__: my_metric
+                a: "1"
+              targets: 1000
+              type: GAUGE
+              mintime: 1595412000000
+              maxtime: 1596016799999
+              jitter: 3e+07
+              scrapeInterval: 15s
+              changeInterval: 1h0m0s
+              max: 2e+08
+              min: 1e+07
+        - --output.dir=/data-shared/prometheus
+        command:
+        - /bin/thanosbench
+        image: quay.io/thanos/thanosbench:chunk-iter-2020-08-05-4a32777
+        name: blockgen
+        resources:
+          limits:
+            cpu: "1"
+            memory: 5Gi
+          requests:
+            cpu: "1"
+            memory: 5Gi
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 1000
+        volumeMounts:
+        - mountPath: /data-shared
+          name: prometheus-chunkiter
+      volumes:
+      - configMap:
+          name: prometheus-chunkiter-config
+        name: prometheus-chunkiter-config
+      - name: prometheus-chunkiter
+  updateStrategy: {}
+status:
+  replicas: 0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: prometheus-chunkiter
+  name: prometheus-chunkiter
+  namespace: default
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 9090
+    targetPort: 9090
+  - name: grpc-sidecar
+    port: 19090
+    targetPort: 19090
+  - name: http-sidecar
+    port: 19190
+    targetPort: 19190
+  selector:
+    app: prometheus-chunkiter
+  type: ClusterIP
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+data:
+  prometheus.yaml: |
+    global:
+      external_labels:
+        replica: "0"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: prometheus-chunkiter
+  name: prometheus-chunkiter-config
+  namespace: default
