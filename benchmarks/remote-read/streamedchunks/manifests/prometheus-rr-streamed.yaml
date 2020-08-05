@@ -3,20 +3,20 @@ kind: StatefulSet
 metadata:
   creationTimestamp: null
   labels:
-    app: prometheus
-  name: prometheus
+    app: prometheus-rr-streamed
+  name: prometheus-rr-streamed
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: prometheus
-  serviceName: prometheus
+      app: prometheus-rr-streamed
+  serviceName: prometheus-rr-streamed
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: prometheus
+        app: prometheus-rr-streamed
     spec:
       containers:
       - args:
@@ -35,7 +35,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: quay.io/prometheus/prometheus:v2.12.0
+        image: quay.io/prometheus/prometheus:v2.13.0
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -64,9 +64,9 @@ spec:
           runAsUser: 1000
         volumeMounts:
         - mountPath: /etc/prometheus
-          name: prometheus-config
+          name: prometheus-rr-streamed-config
         - mountPath: /data-shared
-          name: prometheus
+          name: prometheus-rr-streamed
       - args:
         - sidecar
         - --log.level=debug
@@ -106,49 +106,36 @@ spec:
           runAsUser: 1000
         volumeMounts:
         - mountPath: /data-shared
-          name: prometheus
+          name: prometheus-rr-streamed
       initContainers:
       - args:
         - walgen
-        - |-
-          --config={
-            "InputSeries": [
-              {
-                "Type": "gauge",
-                "Characteristics": {
-                  "Jitter": 20,
-                  "ScrapeInterval": 15000000000,
-                  "ChangeInterval": 3600000000000,
-                  "Max": 200000000,
-                  "Min": 100000000
-                },
-                "Result": {
-                  "resultType": "vector",
-                  "result": [
-                    {
-                      "metric": {
-                        "__name__": "kube_pod_container_resource_limits_memory_bytes",
-                        "cluster": "eu1",
-                        "container": "addon-resizer",
-                        "instance": "172.17.0.9:8080",
-                        "job": "kube-state-metrics",
-                        "namespace": "kube-system",
-                        "node": "node1",
-                        "pod": "kube-state-metrics-68f6cc566c-vp566"
-                      },
-                      "value": [
-                        0,
-                        "0"
-                      ]
-                    }
-                  ]
-                },
-                "Replicate": 10000
-              }
-            ],
-            "Retention": 36000000000000,
-            "ScrapeInterval": 0
-          }
+        - |
+          --config=inputseries:
+          - type: gauge
+            characteristics:
+              jitter: 20
+              scrapeInterval: 15s
+              changeInterval: 1h0m0s
+              max: 2e+08
+              min: 1e+08
+            result:
+              resulttype: 2
+              result:
+              - metric:
+                  __name__: kube_pod_container_resource_limits_memory_bytes
+                  cluster: eu1
+                  container: addon-resizer
+                  instance: 172.17.0.9:8080
+                  job: kube-state-metrics
+                  namespace: kube-system
+                  node: node1
+                  pod: kube-state-metrics-68f6cc566c-vp566
+                value: 0
+                timestamp: 0
+            replicate: 10000
+          retention: 10h0m0s
+          scrapeinterval: 0s
         - --output.dir=/data-shared/prometheus
         command:
         - /bin/thanosbench
@@ -166,12 +153,12 @@ spec:
           runAsUser: 1000
         volumeMounts:
         - mountPath: /data-shared
-          name: prometheus
+          name: prometheus-rr-streamed
       volumes:
       - configMap:
-          name: prometheus-config
-        name: prometheus-config
-      - name: prometheus
+          name: prometheus-rr-streamed-config
+        name: prometheus-rr-streamed-config
+      - name: prometheus-rr-streamed
   updateStrategy: {}
 status:
   replicas: 0
@@ -181,8 +168,8 @@ kind: Service
 metadata:
   creationTimestamp: null
   labels:
-    app: prometheus
-  name: prometheus
+    app: prometheus-rr-streamed
+  name: prometheus-rr-streamed
   namespace: default
 spec:
   clusterIP: None
@@ -197,7 +184,7 @@ spec:
     port: 19190
     targetPort: 19190
   selector:
-    app: prometheus
+    app: prometheus-rr-streamed
   type: ClusterIP
 status:
   loadBalancer: {}
@@ -212,6 +199,6 @@ kind: ConfigMap
 metadata:
   creationTimestamp: null
   labels:
-    app: prometheus
-  name: prometheus-config
+    app: prometheus-rr-streamed
+  name: prometheus-rr-streamed-config
   namespace: default

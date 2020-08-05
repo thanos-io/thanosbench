@@ -62,7 +62,8 @@ gen:
 	@rm -rf benchmarks/**/manifests
 	@go run benchmarks/base/main.go generate
 	@go run benchmarks/lts/main.go generate --tag=v0.8.1
-	@go run benchmarks/remote-read/main.go generate
+	@go run benchmarks/remote-read/chunkiter/main.go generate
+	@go run benchmarks/remote-read/streamedchunks/main.go generate
 
 .PHONY: promu
 promu: $(PROMU)

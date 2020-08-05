@@ -17,6 +17,7 @@ import (
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/thanos-io/thanosbench/configs/abstractions/dockerimage"
+	"github.com/thanos-io/thanosbench/pkg/blockgen"
 	"github.com/thanos-io/thanosbench/pkg/walgen"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,7 +35,7 @@ func GenMonitor(gen *mimic.Generator, namespace string) {
 
 		Img:       dockerimage.PublicPrometheus("v2.13.0-rc.0"),
 		ThanosImg: dockerimage.PublicThanos("v0.7.0"),
-
+		Retention: "2d",
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("1"),
@@ -249,14 +250,16 @@ type PrometheusOpts struct {
 	Resources corev1.ResourceRequirements
 
 	// If empty, no data autogeneration will be defined.
-	WalGenConfig *walgen.Config
-	WalGenImg    dockerimage.Image
+	WalGenConfig   *walgen.Config
+	BlockgenSpecs  []blockgen.BlockSpec
+	ThanosbenchImg dockerimage.Image
 
 	ThanosImg       dockerimage.Image
 	ThanosResources corev1.ResourceRequirements
 
 	DisableCompactions bool
 	ServiceAccountName string
+	Retention          string
 
 	StoreAPILabelSelector string
 }
@@ -266,7 +269,6 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 	const (
 		replicas = 1
 
-		configVolumeName  = "prometheus-config"
 		configVolumeMount = "/etc/prometheus"
 		sharedDataPath    = "/data-shared"
 
@@ -275,7 +277,8 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 		grpcSidecarPort = 19090
 	)
 	var (
-		promDataPath = path.Join(sharedDataPath, "prometheus")
+		configVolumeName = fmt.Sprintf("%s-config", opts.Name)
+		promDataPath     = path.Join(sharedDataPath, "prometheus")
 	)
 
 	promConfigAndMount := volumes.ConfigAndMount{
@@ -358,7 +361,7 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 				}
 				return "--storage.tsdb.max-block-duration=4h"
 			}(),
-			"--storage.tsdb.retention.time=2d",
+			fmt.Sprintf("--storage.tsdb.retention.time=%s", opts.Retention),
 			"--web.enable-lifecycle",
 			"--web.enable-admin-api",
 		},
@@ -457,11 +460,38 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 	if opts.WalGenConfig != nil {
 		initContainers = append(initContainers, corev1.Container{
 			Name:    "walgen",
-			Image:   opts.WalGenImg.String(),
+			Image:   opts.ThanosbenchImg.String(),
 			Command: []string{"/bin/thanosbench"},
 			Args: []string{
 				"walgen",
-				fmt.Sprintf("--config=%s", string(genInPlace(encoding.JSON(*opts.WalGenConfig)))),
+				fmt.Sprintf("--config=%s", string(genInPlace(encoding.YAML(*opts.WalGenConfig)))),
+				fmt.Sprintf("--output.dir=%s", promDataPath),
+			},
+			VolumeMounts: []corev1.VolumeMount{sharedVM.VolumeMount},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("5Gi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("5Gi"),
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				RunAsNonRoot: swag.Bool(false),
+				RunAsUser:    swag.Int64(1000),
+			},
+		})
+	}
+	if len(opts.BlockgenSpecs) > 0 {
+		initContainers = append(initContainers, corev1.Container{
+			Name:    "blockgen",
+			Image:   opts.ThanosbenchImg.String(),
+			Command: []string{"/bin/thanosbench"},
+			Args: []string{
+				"block", "gen",
+				fmt.Sprintf("--config=%s", string(genInPlace(encoding.YAML(opts.BlockgenSpecs)))),
 				fmt.Sprintf("--output.dir=%s", promDataPath),
 			},
 			VolumeMounts: []corev1.VolumeMount{sharedVM.VolumeMount},

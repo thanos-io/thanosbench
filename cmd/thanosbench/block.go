@@ -17,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 	promModel "github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/pkg/labels"
+	"github.com/thanos-io/thanos/pkg/extflag"
 	"github.com/thanos-io/thanos/pkg/model"
 	"github.com/thanos-io/thanosbench/pkg/blockgen"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -42,6 +43,7 @@ func registerBlock(m map[string]setupFunc, app *kingpin.Application) {
 }
 func registerBlockGen(m map[string]setupFunc, root *kingpin.CmdClause) {
 	cmd := root.Command("gen", "Generates Prometheus/Thanos TSDB blocks from input. Expects []blockgen.BlockSpec in YAML format as input.")
+	config := extflag.RegisterPathOrContent(cmd, "config", "YAML for  []blockgen.BlockSpec. Leave this empty in order to be able to pass this through STDIN", false)
 	outputDir := cmd.Flag("output.dir", "Output directory for generated data.").Required().String()
 	workers := cmd.Flag("workers", "Number of go routines for block generation. If 0, 2*runtime.GOMAXPROCS(0) is used.").Int()
 	m["block gen"] = func(g *run.Group, logger log.Logger) error {
@@ -52,10 +54,32 @@ func registerBlockGen(m map[string]setupFunc, root *kingpin.CmdClause) {
 				goroutines = 2 * runtime.GOMAXPROCS(0)
 			}
 
-			dec := yaml.NewDecoder(os.Stdin)
-			dec.SetStrict(true)
+			cfg, err := config.Content()
+			if err != nil {
+				return err
+			}
 
 			n := 0
+			if len(cfg) > 0 {
+				bs := []blockgen.BlockSpec{}
+				if err := yaml.UnmarshalStrict(cfg, &bs); err != nil {
+					return err
+				}
+				for _, b := range bs {
+					level.Info(logger).Log("msg", "generating block", "spec", printBlocks(b))
+					id, err := blockgen.Generate(ctx, logger, goroutines, *outputDir, b)
+					if err != nil {
+						return errors.Wrap(err, "generate")
+					}
+					n++
+					level.Info(logger).Log("msg", "generated block", "path", path.Join(*outputDir, id.String()), "count", n)
+					runtime.GC()
+				}
+				return ctx.Err()
+			}
+
+			dec := yaml.NewDecoder(os.Stdin)
+			dec.SetStrict(true)
 			for ctx.Err() == nil {
 				b := blockgen.BlockSpec{}
 				err := dec.Decode(&b)

@@ -64,7 +64,7 @@ spec:
           runAsUser: 1000
         volumeMounts:
         - mountPath: /etc/prometheus
-          name: prometheus-config
+          name: monitor-config
         - mountPath: /data-shared
           name: monitor
       - args:
@@ -110,8 +110,8 @@ spec:
       serviceAccountName: monitor
       volumes:
       - configMap:
-          name: prometheus-config
-        name: prometheus-config
+          name: monitor-config
+        name: monitor-config
       - name: monitor
   updateStrategy: {}
 status:
@@ -205,5 +205,5 @@ metadata:
   creationTimestamp: null
   labels:
     app: monitor
-  name: prometheus-config
+  name: monitor-config
   namespace: default
