@@ -228,6 +228,8 @@ Prometheus is configured to monitor only the namespace configured in `namespace`
 
 `kind` has cadvisor built in and default Prometheus is set to monitor it.
 
+4. `thanosbench` needs to be compiled with Go 1.14 or later.
+
 ### Benchmarks
 
 * [Remote read](benchmarks/remote-read/README.md)
