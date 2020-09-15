@@ -4,17 +4,16 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-
-	"github.com/prometheus/prometheus/tsdb"
+	"github.com/prometheus/prometheus/storage"
 	"golang.org/x/sync/errgroup"
 )
 
-func Append(ctx context.Context, goroutines int, appendable tsdb.Appendable, series SeriesSet) error {
+func Append(ctx context.Context, goroutines int, appendable storage.Appendable, series SeriesSet) error {
 	g, gctx := errgroup.WithContext(ctx)
 
 	workBuffer := make(chan Series)
 	for i := 0; i < goroutines; i++ {
-		app := appendable.Appender()
+		app := appendable.Appender(gctx)
 		g.Go(func() error {
 			var (
 				s   Series

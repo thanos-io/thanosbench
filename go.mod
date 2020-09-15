@@ -3,21 +3,21 @@ module github.com/thanos-io/thanosbench
 require (
 	github.com/bwplotka/mimic v0.0.0-20190730202618-06ab9976e8ef
 	github.com/fatih/structtag v1.1.0
-	github.com/go-kit/kit v0.9.0
-	github.com/go-openapi/swag v0.19.5
-	github.com/oklog/run v1.0.0
+	github.com/go-kit/kit v0.10.0
+	github.com/go-openapi/swag v0.19.9
+	github.com/oklog/run v1.1.0
 	github.com/oklog/ulid v1.3.1
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/common v0.9.1
-	github.com/prometheus/prometheus v1.8.2-0.20200213233353-b90be6f32a33
-	github.com/thanos-io/thanos v0.12.2
+	github.com/prometheus/common v0.11.1
+	github.com/prometheus/prometheus v1.8.2-0.20200811193703-869f1bc587e6
+	github.com/thanos-io/thanos v0.15.0
 	go.uber.org/automaxprocs v1.2.0
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	google.golang.org/grpc v1.25.1
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
+	google.golang.org/grpc v1.30.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/yaml.v2 v2.2.7
-	k8s.io/api v0.0.0-20191115095533-47f6de673b26
-	k8s.io/apimachinery v0.0.0-20191115015347-3c7067801da2
+	gopkg.in/yaml.v2 v2.3.0
+	k8s.io/api v0.18.6
+	k8s.io/apimachinery v0.18.6
 )
 
 // We want to replace the client-go version with a specific commit hash,

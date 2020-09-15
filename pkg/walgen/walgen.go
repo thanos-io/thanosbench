@@ -48,25 +48,13 @@ func GenerateTSDBWAL(logger log.Logger, dir string, config Config) error {
 		config.ScrapeInterval = 15 * time.Second
 	}
 
-	// Same code as Prometheus for compaction levels and max block.
-	rngs := tsdb.ExponentialBlockRanges(int64(2*time.Hour.Seconds()*1000), 10, 3)
 	maxBlockDuration := config.Retention / 10
-	for i, v := range rngs {
-		if v > int64(maxBlockDuration.Seconds()*1000) {
-			rngs = rngs[:i]
-			break
-		}
-	}
-
-	if len(rngs) == 0 {
-		rngs = append(rngs, int64(2*time.Hour.Seconds()*1000))
-	}
-
 	// TODO(bwplotka): Moved to something like https://github.com/thanos-io/thanos/blob/master/pkg/testutil/prometheus.go#L289
 	//  to actually generate blocks! It will be fine for TSDB use cases as well.
 	db, err := tsdb.Open(dir, nil, nil, &tsdb.Options{
-		BlockRanges:       rngs,
-		RetentionDuration: uint64(config.Retention.Seconds() * 1000),
+		MinBlockDuration:  int64(2 * time.Hour / time.Millisecond),
+		MaxBlockDuration:  maxBlockDuration.Milliseconds(),
+		RetentionDuration: config.Retention.Milliseconds(),
 		NoLockfile:        true,
 	})
 	if err != nil {
