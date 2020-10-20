@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
 	"github.com/prometheus/prometheus/pkg/timestamp"
+	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/tsdb"
 	"github.com/prometheus/prometheus/tsdb/chunkenc"
 )
@@ -65,8 +66,8 @@ func NewTSDBBlockWriter(logger log.Logger, dir string) (*BlockWriter, error) {
 }
 
 // Appender is not thread-safe. Returned Appender is thread-save however..
-func (w *BlockWriter) Appender() tsdb.Appender {
-	return w.head.Appender()
+func (w *BlockWriter) Appender(ctx context.Context) storage.Appender {
+	return w.head.Appender(ctx)
 }
 
 // Flush implements Writer interface. This is where actual block writing
@@ -96,7 +97,7 @@ func (w *BlockWriter) initHeadAndAppender() error {
 	//    var w *wal.WAL = nil
 	// Put huge chunkRange; It has to be equal then expected block size.
 	// Since we don't have info about block size here, set it to large number.
-	h, err := tsdb.NewHead(nil, logger, nil, durToMilis(9999*time.Hour), tsdb.DefaultStripeSize)
+	h, err := tsdb.NewHead(nil, logger, nil, durToMilis(9999*time.Hour), "", nil, tsdb.DefaultStripeSize, nil)
 	if err != nil {
 		return errors.Wrap(err, "tsdb.NewHead")
 	}
@@ -108,7 +109,7 @@ func (w *BlockWriter) initHeadAndAppender() error {
 
 // writeHeadToDisk commits the appender and writes the head to disk.
 func (w *BlockWriter) writeHeadToDisk() (ulid.ULID, error) {
-	if err := w.Appender().Commit(); err != nil {
+	if err := w.Appender(context.TODO()).Commit(); err != nil {
 		return ulid.ULID{}, errors.Wrap(err, "appender.Commit")
 	}
 
