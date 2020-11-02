@@ -26,18 +26,6 @@ func (p ProfileMap) Keys() (keys []string) {
 
 var (
 	Profiles = ProfileMap{
-		"key-k8s-30s-tiny": realisticK8s([]time.Duration{
-			// Two days, from newest to oldest, in the same way Thanos compactor would do.
-			2 * time.Hour,
-			2 * time.Hour,
-			2 * time.Hour,
-			8 * time.Hour,
-			8 * time.Hour,
-			8 * time.Hour,
-			8 * time.Hour,
-			8 * time.Hour,
-			2 * time.Hour,
-		}, 1*time.Hour, 1, 5),
 		// Let's say we have 100 applications, 50 metrics each. All rollout every 1h.
 		// This makes 2h block to have 15k series, 8h block 45k, 2d block to have 245k series.
 		"realistic-k8s-2d-small": realisticK8s([]time.Duration{
@@ -78,6 +66,19 @@ var (
 			2 * time.Hour,
 			// 10,000 series per block.
 		}, 100, 100),
+
+		"key-k8s-30d-tiny": realisticK8s([]time.Duration{
+			// 30 days, from newest to oldest, in the same way Thanos compactor would do.
+			2 * time.Hour,
+			2 * time.Hour,
+			2 * time.Hour,
+			8 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			2 * time.Hour,
+		}, 1*time.Hour, 1, 5),
 	}
 )
 
