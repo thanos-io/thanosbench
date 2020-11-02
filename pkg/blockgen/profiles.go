@@ -68,7 +68,7 @@ var (
 		}, 100, 100),
 
 		"key-k8s-30d-tiny": realisticK8s([]time.Duration{
-			// 30 days, from newest to oldest, in the same way Thanos compactor would do.
+			// 30 days, from newest to oldest.
 			2 * time.Hour,
 			2 * time.Hour,
 			2 * time.Hour,
