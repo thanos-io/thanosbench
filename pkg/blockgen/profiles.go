@@ -79,6 +79,21 @@ var (
 			176 * time.Hour,
 			2 * time.Hour,
 		}, 1*time.Hour, 1, 5),
+
+		"key-k8s-365d-tiny": realisticK8s([]time.Duration{
+			// 1y days, from newest to oldest.
+			2 * time.Hour,
+			2 * time.Hour,
+			2 * time.Hour,
+			8 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			67 * 24 * time.Hour,
+			67 * 24 * time.Hour,
+			67 * 24 * time.Hour,
+		}, 1*time.Hour, 1, 5),
 	}
 )
 
