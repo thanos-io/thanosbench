@@ -2,6 +2,7 @@ module github.com/thanos-io/thanosbench
 
 require (
 	github.com/bwplotka/mimic v0.0.0-20190730202618-06ab9976e8ef
+	github.com/cespare/xxhash/v2 v2.1.1
 	github.com/fatih/structtag v1.1.0
 	github.com/go-kit/kit v0.10.0
 	github.com/go-openapi/swag v0.19.9

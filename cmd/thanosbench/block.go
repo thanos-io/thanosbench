@@ -133,7 +133,7 @@ Example plan with generation:
 ./thanosbench block plan -p <profile> --labels 'cluster="one"' --max-time 2019-10-18T00:00:00Z | ./thanosbench block gen --output.dir ./genblocks --workers 20`)
 	profile := cmd.Flag("profile", "Name of the harcoded profile to use").Required().Short('p').Enum(blockgen.Profiles.Keys()...)
 	maxTime := model.TimeOrDuration(cmd.Flag("max-time", "If empty current time - 30m (usual consistency delay) is used.").Default("30m"))
-	extLset := cmd.Flag("labels", "External labels for block stream (repeated).").PlaceHolder("<name>=\"<value>\"").Required().Strings()
+	extLset := cmd.Flag("labels", "External labels for block stream (repeated).").PlaceHolder("<name>=\"<value>\"").Strings()
 	m["block plan"] = func(g *run.Group, _ log.Logger) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {

@@ -7,6 +7,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/pkg/errors"
 
 	"github.com/go-kit/kit/log"
@@ -76,7 +77,12 @@ func Generate(ctx context.Context, logger log.Logger, goroutines int, dir string
 	if err != nil {
 		return ulid.ULID{}, err
 	}
-	set := &blockSeriesSet{config: block}
+
+	extLset := block.Thanos.Labels
+	if extLset == nil {
+		extLset = map[string]string{}
+	}
+	set := &blockSeriesSet{config: block, extLset: labels.FromMap(extLset)}
 	if err := seriesgen.Append(ctx, goroutines, w, set); err != nil {
 		return ulid.ULID{}, errors.Wrap(err, "append")
 	}
@@ -98,10 +104,11 @@ func Generate(ctx context.Context, logger log.Logger, goroutines int, dir string
 }
 
 type blockSeriesSet struct {
-	config BlockSpec
-	i      int
-	target int
-	err    error
+	config  BlockSpec
+	extLset labels.Labels
+	i       int
+	target  int
+	err     error
 
 	curr seriesgen.Series
 }
@@ -122,9 +129,23 @@ func (s *blockSeriesSet) Next() bool {
 	series := s.config.Series[s.i-1]
 	lset := labels.Labels(append([]labels.Label{{Name: "__blockgen_target__", Value: fmt.Sprintf("%v", s.target)}}, series.Labels...))
 
+	b := make([]byte, 0, 1024)
+	for _, v := range lset {
+		b = append(b, v.Name...)
+		b = append(b, '\xff')
+		b = append(b, v.Value...)
+		b = append(b, '\xff')
+	}
+	for _, v := range s.extLset {
+		b = append(b, v.Name...)
+		b = append(b, '\xff')
+		b = append(b, v.Value...)
+		b = append(b, '\xff')
+	}
+
 	// Stable random per series name.
 	iter, err := series.Type.Create(
-		rand.New(rand.NewSource(int64(lset.Hash()))),
+		rand.New(rand.NewSource(int64(xxhash.Sum64(b)))),
 		series.MinTime,
 		series.MaxTime,
 		series.Characteristics,
