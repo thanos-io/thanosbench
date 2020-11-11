@@ -52,7 +52,34 @@ var (
 			48 * time.Hour,
 			2 * time.Hour,
 		}, 1*time.Hour, 100, 50),
-
+		"realistic-k8s-30d-tiny": realisticK8s([]time.Duration{
+			// 30 days, from newest to oldest.
+			2 * time.Hour,
+			2 * time.Hour,
+			2 * time.Hour,
+			8 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			2 * time.Hour,
+		}, 1*time.Hour, 1, 5),
+		"realistic-k8s-365d-tiny": realisticK8s([]time.Duration{
+			// 1y days, from newest to oldest.
+			2 * time.Hour,
+			2 * time.Hour,
+			2 * time.Hour,
+			8 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			176 * time.Hour,
+			67 * 24 * time.Hour,
+			67 * 24 * time.Hour,
+			67 * 24 * time.Hour,
+			67 * 24 * time.Hour,
+			67 * 24 * time.Hour,
+		}, 1*time.Hour, 1, 5),
 		"continuous-1w-small": continuous([]time.Duration{
 			// One week, from newest to oldest, in the same way Thanos compactor would do.
 			2 * time.Hour,
@@ -66,8 +93,7 @@ var (
 			2 * time.Hour,
 			// 10,000 series per block.
 		}, 100, 100),
-
-		"key-k8s-30d-tiny": realisticK8s([]time.Duration{
+		"continuous-30d-tiny": continuous([]time.Duration{
 			// 30 days, from newest to oldest.
 			2 * time.Hour,
 			2 * time.Hour,
@@ -78,9 +104,8 @@ var (
 			176 * time.Hour,
 			176 * time.Hour,
 			2 * time.Hour,
-		}, 1*time.Hour, 1, 5),
-
-		"key-k8s-365d-tiny": realisticK8s([]time.Duration{
+		}, 1, 5),
+		"continuous-365d-tiny": continuous([]time.Duration{
 			// 1y days, from newest to oldest.
 			2 * time.Hour,
 			2 * time.Hour,
@@ -93,7 +118,9 @@ var (
 			67 * 24 * time.Hour,
 			67 * 24 * time.Hour,
 			67 * 24 * time.Hour,
-		}, 1*time.Hour, 1, 5),
+			67 * 24 * time.Hour,
+			67 * 24 * time.Hour,
+		}, 1, 5),
 	}
 )
 
@@ -201,7 +228,7 @@ func continuous(ranges []time.Duration, apps int, metricsPerApp int) PlanFn {
 		}
 
 		for _, r := range ranges {
-			mint := maxt - durToMilis(r)
+			mint := maxt - durToMilis(r) + 1
 
 			if ctx.Err() != nil {
 				return ctx.Err()
