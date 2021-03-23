@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: benchmarking
+    app.kubernetes.io/instance: thanos-receive-benchmark
+    app.kubernetes.io/name: thanos-receive-benchmark
+    app.kubernetes.io/version: v0.17.2
+  name: thanos-receive-benchmark
+  namespace: thanos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: benchmarking
+      app.kubernetes.io/instance: thanos-receive-benchmark
+      app.kubernetes.io/name: thanos-receive-benchmark
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: benchmarking
+        app.kubernetes.io/instance: thanos-receive-benchmark
+        app.kubernetes.io/name: thanos-receive-benchmark
+        app.kubernetes.io/version: v0.17.2
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                        - thanos-receive-benchmark
+                namespaces:
+                  - thanos
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        - name: thanos-receive-benchmark
+          image: quay.io/metalmatze/thanos-receive-benchmark:latest
+          imagePullPolicy: Always
+          args:
+            - --config-file=/etc/thanos-receive-benchmark/config.yaml
+          volumeMounts:
+            - mountPath: /etc/thanos-receive-benchmark
+              name: config
+      volumes:
+        - name: config
+          configMap:
+            name: thanos-receive-benchmark-config
+---
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+#  labels:
+#    app.kubernetes.io/component: benchmarking
+#    app.kubernetes.io/instance: thanos-receive-benchmark
+#    app.kubernetes.io/name: thanos-receive-benchmark
+#  name: thanos-receive-benchmark
+#  namespace: thanos
+#spec:
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      app.kubernetes.io/component: benchmarking
+#      app.kubernetes.io/instance: thanos-receive-benchmark
+#      app.kubernetes.io/name: thanos-receive-benchmark
+#  template:
+#    metadata:
+#      labels:
+#        app.kubernetes.io/component: benchmarking
+#        app.kubernetes.io/instance: thanos-receive-benchmark
+#        app.kubernetes.io/name: thanos-receive-benchmark
+#    spec:
+#      containers:
+#        - name: thanos-receive-benchmark
+#          image: quay.io/freshtracks.io/avalanche
+#          args:
+#            - --remote-url=http://thanos-receive.thanos.svc.cluster.local:19291/api/v1/receive

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-receive
+  namespace: thanos
+  labels:
+    app.kubernetes.io/component: database-write-hashring
+    app.kubernetes.io/instance: thanos-receive
+    app.kubernetes.io/name: thanos-receive
+spec:
+  ports:
+  - name: http
+    port: 10902
+    targetPort: 10902
+  - name: remote-write
+    port: 19291
+    targetPort: 19291
+  selector:
+    app.kubernetes.io/name: thanos-receive-route

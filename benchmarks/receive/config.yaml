@@ -1,0 +1,14 @@
+url: http://localhost:19291/api/v1/receive
+objectives:
+
+tenants:
+  - name: default-tenant
+    clients: 5
+    reqs: 1
+    timeseries:
+      - name: up
+        labels:
+          - name: job
+            cardinality: 5
+          - name: instance
+            cardinality: 10
