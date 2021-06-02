@@ -3,20 +3,24 @@ module github.com/thanos-io/thanosbench
 require (
 	github.com/bwplotka/mimic v0.0.0-20190730202618-06ab9976e8ef
 	github.com/cespare/xxhash/v2 v2.1.1
-	github.com/fatih/structtag v1.1.0
+	github.com/fatih/structtag v1.2.0
 	github.com/go-kit/kit v0.10.0
-	github.com/go-openapi/swag v0.19.9
+	github.com/go-openapi/swag v0.19.14
+	github.com/gogo/protobuf v1.3.1 // indirect
+	github.com/golang/snappy v0.0.3 // indirect
 	github.com/oklog/run v1.1.0
 	github.com/oklog/ulid v1.3.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.11.1
 	github.com/prometheus/prometheus v1.8.2-0.20200811193703-869f1bc587e6
+	github.com/stretchr/testify v1.6.1 // indirect
 	github.com/thanos-io/thanos v0.15.0
 	go.uber.org/automaxprocs v1.2.0
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	google.golang.org/grpc v1.30.0
+	google.golang.org/protobuf v1.24.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.18.6
 	k8s.io/apimachinery v0.18.6
 )

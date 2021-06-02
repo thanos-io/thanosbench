@@ -1,0 +1,139 @@
+#apiVersion: apps/v1
+#kind: StatefulSet
+#metadata:
+#  labels:
+#    app.kubernetes.io/component: database-write-hashring
+#    app.kubernetes.io/name: thanos-receive
+#    controller.receive.thanos.io: thanos-receive-controller
+#    controller.receive.thanos.io/hashring: default
+#  name: thanos-receive-default
+#  namespace: thanos
+#spec:
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      app.kubernetes.io/component: database-write-hashring
+#      app.kubernetes.io/name: thanos-receive
+#      controller.receive.thanos.io/hashring: default
+#  serviceName: thanos-receive-default
+#  template:
+#    metadata:
+#      labels:
+#        app.kubernetes.io/component: database-write-hashring
+#        app.kubernetes.io/name: thanos-receive
+#        controller.receive.thanos.io/hashring: default
+#    spec:
+#      affinity:
+#        podAntiAffinity:
+#          preferredDuringSchedulingIgnoredDuringExecution:
+#          - podAffinityTerm:
+#              labelSelector:
+#                matchExpressions:
+#                - key: app.kubernetes.io/name
+#                  operator: In
+#                  values:
+#                  - thanos-receive
+#              namespaces:
+#              - thanos
+#              topologyKey: kubernetes.io/hostname
+#            weight: 100
+#          - podAffinityTerm:
+#              labelSelector:
+#                matchExpressions:
+#                - key: app.kubernetes.io/name
+#                  operator: In
+#                  values:
+#                  - thanos-receive
+#              namespaces:
+#              - thanos
+#              topologyKey: topology.kubernetes.io/zone
+#            weight: 100
+#      serviceAccountName: thanos-receive
+#      containers:
+#      - args:
+#        - --path=/var/lib/thanos-receive/hashrings.json
+#        - --name=thanos-receive-controller-tenants-generated
+#        - --key=hashrings.json
+#        - --namespace=$(NAMESPACE)
+#        env:
+#        - name: NAMESPACE
+#          valueFrom:
+#            fieldRef:
+#              fieldPath: metadata.namespace
+#        image: squat/configmap-to-disk
+#        name: configmap-to-disk
+#        resources:
+#          requests:
+#            cpu: 20m
+#          limits:
+#            cpu: 20m
+#        volumeMounts:
+#        - mountPath: /var/lib/thanos-receive
+#          name: hashring-config
+#      - args:
+#        - receive
+#        - --grpc-address=0.0.0.0:10901
+#        - --http-address=0.0.0.0:10902
+#        - --remote-write.address=0.0.0.0:19291
+#        - --receive.replication-factor=3
+#        - --tsdb.path=/var/thanos/receive
+#        - --label=replica="$(NAME)"
+#        - --label=receive="true"
+#        - --receive.local-endpoint=$(NAME).thanos-receive-default.$(NAMESPACE).svc.cluster.local:10901
+#        - --tsdb.retention=1d
+#        - --receive.hashrings-file=/var/lib/thanos-receive/hashrings.json
+#        - --log.level=info
+#        env:
+#        - name: NAME
+#          valueFrom:
+#            fieldRef:
+#              fieldPath: metadata.name
+#        - name: NAMESPACE
+#          valueFrom:
+#            fieldRef:
+#              fieldPath: metadata.namespace
+#        - name: DEBUG
+#          value: ""
+#        image: quay.io/metalmatze/thanos:receive-buckets
+#        imagePullPolicy: Always
+#        livenessProbe:
+#          failureThreshold: 8
+#          httpGet:
+#            path: /-/healthy
+#            port: 10902
+#            scheme: HTTP
+#          periodSeconds: 30
+#        name: thanos-receive
+#        ports:
+#        - containerPort: 10901
+#          name: grpc
+#        - containerPort: 10902
+#          name: http
+#        - containerPort: 19291
+#          name: remote-write
+#        readinessProbe:
+#          failureThreshold: 20
+#          httpGet:
+#            path: /-/ready
+#            port: 10902
+#            scheme: HTTP
+#          periodSeconds: 5
+#        resources:
+#          requests:
+#            cpu: 500m
+#          limits:
+#            cpu: '1'
+#        terminationMessagePolicy: FallbackToLogsOnError
+#        volumeMounts:
+#        - mountPath: /var/thanos/receive
+#          name: data
+#          readOnly: false
+#        - mountPath: /var/lib/thanos-receive
+#          name: hashring-config
+#      terminationGracePeriodSeconds: 900
+#      volumes:
+#      - emptyDir: {}
+#        name: data
+#      - emptyDir: {}
+#        name: hashring-config
+#  volumeClaimTemplates: null

@@ -46,9 +46,9 @@ $(MISSPELL): .bingo/misspell.mod
 	@echo "(re)installing $(GOBIN)/misspell-v0.3.4"
 	@cd .bingo && $(GO) build -modfile=misspell.mod -o=$(GOBIN)/misspell-v0.3.4 "github.com/client9/misspell/cmd/misspell"
 
-PROMU := $(GOBIN)/promu-v0.5.0
+PROMU := $(GOBIN)/promu-v0.8.1
 $(PROMU): .bingo/promu.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/promu-v0.5.0"
-	@cd .bingo && $(GO) build -modfile=promu.mod -o=$(GOBIN)/promu-v0.5.0 "github.com/prometheus/promu"
+	@echo "(re)installing $(GOBIN)/promu-v0.8.1"
+	@cd .bingo && $(GO) build -modfile=promu.mod -o=$(GOBIN)/promu-v0.8.1 "github.com/prometheus/promu"
 

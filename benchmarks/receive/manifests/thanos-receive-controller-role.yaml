@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/component: kubernetes-controller
+    app.kubernetes.io/instance: thanos-receive-controller
+    app.kubernetes.io/name: thanos-receive-controller
+  name: thanos-receive-controller
+  namespace: thanos
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - list
+  - watch
+  - get
+  - create
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - list
+  - watch
+  - get

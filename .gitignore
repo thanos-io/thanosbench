@@ -28,3 +28,4 @@ website/docs-pre-processed/
 tmp/bin
 
 .bin
+/benchmarks/receive/thanos-receive-benchmark
