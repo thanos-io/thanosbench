@@ -11,7 +11,7 @@ Most of the logic of scaling up and down and deleting some running pods while at
 
 1. `kind create cluster` to have s local cluster (you can skip if you have some other cluster available).
 1. `kubectl create namespace thanos` create the necessary Thanos namespace.
-1. Clone kube-prometheus and run `kubectl apply -f ./manifests/setup/` and `kubectl apply -f ./manifests/` from its root.
+1. Clone [kube-prometheus](https://github.com/prometheus-operator/kube-prometheus.git) and run `kubectl apply -f ./manifests/setup/` and `kubectl apply -f ./manifests/` from its root.
 1. `kubectl delete alertmanagers.monitoring.coreos.com -n monitoring main` you can optionally delete alertmanagers.
 1. `kubectl edit prometheuses.monitoring.coreos.com -n monitoring k8s` and edit the replicas to 1 for a simpler life during development.
 1. Back in this repository run `kubectl apply -f ./benchmarks/receive/manifests/prometheus-operator` to configure the Prometheus to scrape out benchmark.
