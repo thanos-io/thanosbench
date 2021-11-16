@@ -121,6 +121,19 @@ var (
 			67 * 24 * time.Hour,
 			67 * 24 * time.Hour,
 		}, 1, 5),
+		"continuous-1w-1series-10000apps": continuous([]time.Duration{
+			// One week, from newest to oldest, in the same way Thanos compactor would do.
+			2 * time.Hour,
+			2 * time.Hour,
+			2 * time.Hour,
+			8 * time.Hour,
+			8 * time.Hour,
+			48 * time.Hour,
+			48 * time.Hour,
+			48 * time.Hour,
+			2 * time.Hour,
+			// 10,000 series per block.
+		}, 10000, 1),
 	}
 )
 
