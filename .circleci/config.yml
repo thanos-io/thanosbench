@@ -10,7 +10,7 @@ executors:
 
 jobs:
   test:
-    executor: golang-test
+    executor: golang
     working_directory: /go/src/github.com/thanos-io/thanosbench
     environment:
       GO111MODULE: 'on'
