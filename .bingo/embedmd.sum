@@ -1,0 +1,4 @@
+github.com/campoy/embedmd v0.0.0-20181127031020-97c13d6e4160 h1:HJpuhXOHC4EkXDARsLjmXAV9FhlY6qFDnKI/MJM6eoE=
+github.com/campoy/embedmd v0.0.0-20181127031020-97c13d6e4160/go.mod h1:oxyr9RCiSXg0M3VJ3ks0UGfp98BpSSGr0kpiX3MzVl8=
+github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
+github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
