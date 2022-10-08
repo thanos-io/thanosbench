@@ -13,8 +13,8 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/pkg/timestamp"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/model/timestamp"
 	"github.com/prometheus/prometheus/tsdb"
 	"github.com/thanos-io/thanosbench/pkg/seriesgen"
 )
@@ -56,7 +56,7 @@ func GenerateTSDBWAL(logger log.Logger, dir string, config Config) error {
 		MaxBlockDuration:  maxBlockDuration.Milliseconds(),
 		RetentionDuration: config.Retention.Milliseconds(),
 		NoLockfile:        true,
-	})
+	}, nil)
 	if err != nil {
 		level.Error(logger).Log("err", err)
 		os.Exit(1)

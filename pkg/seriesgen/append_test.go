@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/pkg/timestamp"
+	"github.com/prometheus/prometheus/model/exemplar"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/model/metadata"
+	"github.com/prometheus/prometheus/model/timestamp"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/thanos-io/thanos/pkg/testutil"
 )
@@ -50,17 +52,24 @@ type testAppendable struct {
 	samples map[uint64][]sample
 }
 
-func (a *testAppendable) Add(l labels.Labels, t int64, v float64) (uint64, error) {
-	ref := l.Hash()
-	return ref, a.AddFast(ref, t, v)
-}
-
-func (a *testAppendable) AddFast(ref uint64, t int64, v float64) error {
+func (a *testAppendable) Append(ref storage.SeriesRef, l labels.Labels, t int64, v float64) (storage.SeriesRef, error) {
+	hash := uint64(ref)
+	if hash == 0 {
+		hash = l.Hash()
+	}
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 
-	a.samples[ref] = append(a.samples[ref], sample{T: t, V: v})
-	return nil
+	a.samples[hash] = append(a.samples[hash], sample{T: t, V: v})
+	return storage.SeriesRef(hash), nil
+}
+
+func (a *testAppendable) AppendExemplar(ref storage.SeriesRef, l labels.Labels, e exemplar.Exemplar) (storage.SeriesRef, error) {
+	return 0, nil
+}
+
+func (a *testAppendable) UpdateMetadata(ref storage.SeriesRef, l labels.Labels, m metadata.Metadata) (storage.SeriesRef, error) {
+	return 0, nil
 }
 
 func (a *testAppendable) Commit() error {
@@ -94,7 +103,7 @@ func TestAppend(t *testing.T) {
 			{T: 10000, V: 106.42558121988247},
 			{T: 20000, V: 175.7484565559158},
 			{T: 30000, V: 135.06032974565488},
-			{T: 40000, V: 194.61995987962968},
+			{T: 40000, V: 194.61995987962965},
 			{T: 50000, V: 163.6088665433866},
 		},
 	}, a.samples)
