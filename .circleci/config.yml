@@ -1,10 +1,16 @@
-version: 2
+version: 2.1
+
+orbs:
+  go: circleci/go@1.7.1
+
+executors:
+  golang:
+    docker:
+      - image: cimg/go:1.18-node
+
 jobs:
   test:
-    docker:
-     # Build by Thanos make docker-ci
-      - image: quay.io/thanos/thanos-ci:v1.2-go1.14.2-node  
-    working_directory: /go/src/github.com/thanos-io/thanosbench
+    executor: golang
     environment:
       GO111MODULE: 'on'
       # Run garbage collection more aggresively to avoid getting OOMed during the lint phase (4GB limit).
@@ -16,8 +22,9 @@ jobs:
       GOOPTS: "-p 2"
     steps:
       - checkout
+      - go/mod-download-cached
       - setup_remote_docker:
-            version: 17.07.0-ce
+          version: 20.10.12
       - run: make deps
       - run: make build
       - run: make docs
