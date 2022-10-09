@@ -375,7 +375,7 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 		},
 		ImagePullPolicy: corev1.PullAlways,
 		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Port: intstr.FromInt(int(httpPort)),
 					Path: "-/ready",
@@ -384,7 +384,7 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 			SuccessThreshold: 3,
 		},
 		LivenessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path: "/-/healthy",
 					Port: intstr.FromInt(9090),
@@ -441,7 +441,7 @@ func GenPrometheus(gen *mimic.Generator, opts PrometheusOpts) {
 			},
 		},
 		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Port: intstr.FromInt(int(httpSidecarPort)),
 					Path: "metrics",

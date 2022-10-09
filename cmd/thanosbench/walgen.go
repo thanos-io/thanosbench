@@ -4,7 +4,7 @@ import (
 	"os"
 
 	extflag "github.com/efficientgo/tools/extkingpin"
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 	"github.com/oklog/run"
 	"github.com/thanos-io/thanosbench/pkg/walgen"
 	"gopkg.in/alecthomas/kingpin.v2"

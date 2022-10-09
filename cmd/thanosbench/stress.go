@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"google.golang.org/grpc/credentials/insecure"
 	"io"
 	"math"
 	"math/rand"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/prometheus/prometheus/model/labels"
@@ -37,7 +38,7 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 	m["stress"] = func(g *run.Group, logger log.Logger) error {
 		mainCtx, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {
-			conn, err := grpc.Dial((*target).String(), grpc.WithInsecure())
+			conn, err := grpc.Dial((*target).String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				return err
 			}
