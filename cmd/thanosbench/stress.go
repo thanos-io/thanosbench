@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc/credentials/insecure"
 	"io"
 	"math"
 	"math/rand"
@@ -18,6 +17,7 @@ import (
 	"github.com/thanos-io/thanos/pkg/store/storepb"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
