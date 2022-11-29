@@ -11,13 +11,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	extflag "github.com/efficientgo/tools/extkingpin"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	promModel "github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/thanos-io/thanos/pkg/extflag"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/thanos-io/objstore"
+	"github.com/thanos-io/objstore/client"
+	"github.com/thanos-io/thanos/pkg/block"
+	"github.com/thanos-io/thanos/pkg/block/metadata"
+	"github.com/thanos-io/thanos/pkg/extkingpin"
 	"github.com/thanos-io/thanos/pkg/model"
 	"github.com/thanos-io/thanosbench/pkg/blockgen"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -43,7 +48,8 @@ func registerBlock(m map[string]setupFunc, app *kingpin.Application) {
 }
 func registerBlockGen(m map[string]setupFunc, root *kingpin.CmdClause) {
 	cmd := root.Command("gen", "Generates Prometheus/Thanos TSDB blocks from input. Expects []blockgen.BlockSpec in YAML format as input.")
-	config := extflag.RegisterPathOrContent(cmd, "config", "YAML for  []blockgen.BlockSpec. Leave this empty in order to be able to pass this through STDIN", false)
+	config := extflag.RegisterPathOrContent(cmd, "config", "YAML for  []blockgen.BlockSpec. Leave this empty in order to be able to pass this through STDIN", extflag.WithEnvSubstitution())
+	objStore := *extkingpin.RegisterCommonObjStoreFlags(cmd, "", false)
 	outputDir := cmd.Flag("output.dir", "Output directory for generated data.").Required().String()
 	workers := cmd.Flag("workers", "Number of go routines for block generation. If 0, 2*runtime.GOMAXPROCS(0) is used.").Int()
 	m["block gen"] = func(g *run.Group, logger log.Logger) error {
@@ -59,6 +65,25 @@ func registerBlockGen(m map[string]setupFunc, root *kingpin.CmdClause) {
 				return err
 			}
 
+			objStoreContentYaml, err := objStore.Content()
+			if err != nil {
+				return errors.Wrap(err, "getting object store config")
+			}
+
+			var (
+				upload bool
+				bkt    objstore.InstrumentedBucket
+			)
+			if len(objStoreContentYaml) == 0 {
+				level.Info(logger).Log("msg", "no supported bucket was configured, uploads will be disabled")
+			} else {
+				upload = true
+				bkt, err = client.NewBucket(logger, objStoreContentYaml, nil, "blockgen")
+				if err != nil {
+					return err
+				}
+			}
+
 			n := 0
 			if len(cfg) > 0 {
 				bs := []blockgen.BlockSpec{}
@@ -72,8 +97,16 @@ func registerBlockGen(m map[string]setupFunc, root *kingpin.CmdClause) {
 						return errors.Wrap(err, "generate")
 					}
 					n++
-					level.Info(logger).Log("msg", "generated block", "path", path.Join(*outputDir, id.String()), "count", n)
+					blockDir := path.Join(*outputDir, id.String())
+					level.Info(logger).Log("msg", "generated block", "path", blockDir, "count", n)
 					runtime.GC()
+
+					if upload {
+						if err := block.Upload(ctx, logger, bkt, blockDir, metadata.NoneFunc); err != nil {
+							return errors.Wrapf(err, "upload block %s", id)
+						}
+						level.Info(logger).Log("msg", "uploaded block to object storage", "path", blockDir)
+					}
 				}
 				return ctx.Err()
 			}
@@ -97,8 +130,16 @@ func registerBlockGen(m map[string]setupFunc, root *kingpin.CmdClause) {
 					return errors.Wrap(err, "generate")
 				}
 				n++
-				level.Info(logger).Log("msg", "generated block", "path", path.Join(*outputDir, id.String()), "count", n)
+				blockDir := path.Join(*outputDir, id.String())
+				level.Info(logger).Log("msg", "generated block", "path", blockDir, "count", n)
 				runtime.GC()
+
+				if upload {
+					if err := block.Upload(ctx, logger, bkt, blockDir, metadata.NoneFunc); err != nil {
+						return errors.Wrapf(err, "upload block %s", id)
+					}
+					level.Info(logger).Log("msg", "uploaded block to object storage", "path", blockDir)
+				}
 			}
 			return ctx.Err()
 		}, func(error) { cancel() })

@@ -105,7 +105,7 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 			}},
 		},
 		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Port: intstr.FromInt(httpPort),
 					Path: func() string {
@@ -122,7 +122,7 @@ func GenThanosStoreGateway(gen *mimic.Generator, opts StoreGatewayOpts) {
 			FailureThreshold:    3,
 		},
 		//LivenessProbe: &corev1.Probe{
-		//	Handler: corev1.Handler{
+		//	ProbeHandler: corev1.ProbeHandler{
 		//		HTTPGet: &corev1.HTTPGetAction{
 		//			Path: "/-/healthy",
 		//			Port: intstr.FromInt(httpPort),

@@ -8,10 +8,10 @@ import (
 
 	"github.com/oklog/ulid"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/pkg/errors"
-	"github.com/prometheus/prometheus/pkg/timestamp"
+	"github.com/prometheus/prometheus/model/timestamp"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/tsdb"
 	"github.com/prometheus/prometheus/tsdb/chunkenc"
@@ -97,7 +97,9 @@ func (w *BlockWriter) initHeadAndAppender() error {
 	//    var w *wal.WAL = nil
 	// Put huge chunkRange; It has to be equal then expected block size.
 	// Since we don't have info about block size here, set it to large number.
-	h, err := tsdb.NewHead(nil, logger, nil, durToMilis(9999*time.Hour), "", nil, tsdb.DefaultStripeSize, nil)
+	opts := tsdb.DefaultHeadOptions()
+	opts.ChunkRange = durToMilis(9999 * time.Hour)
+	h, err := tsdb.NewHead(nil, logger, nil, opts, nil)
 	if err != nil {
 		return errors.Wrap(err, "tsdb.NewHead")
 	}
@@ -132,7 +134,9 @@ func (w *BlockWriter) writeHeadToDisk() (ulid.ULID, error) {
 		nil,
 		w.logger,
 		[]int64{durToMilis(2 * time.Hour)}, // Does not matter, used only for planning.
-		chunkenc.NewPool())
+		chunkenc.NewPool(),
+		nil,
+	)
 	if err != nil {
 		return ulid.ULID{}, errors.Wrap(err, "create leveled compactor")
 	}

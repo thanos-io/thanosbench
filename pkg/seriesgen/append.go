@@ -36,7 +36,7 @@ func Append(ctx context.Context, goroutines int, appendable storage.Appendable, 
 					}
 				}
 
-				ref := uint64(0)
+				ref := storage.SeriesRef(0)
 				iter := s.Iterator()
 
 				for iter.Next() {
@@ -44,24 +44,13 @@ func Append(ctx context.Context, goroutines int, appendable storage.Appendable, 
 						return gctx.Err()
 					}
 					t, v := iter.At()
-					if ref == 0 {
-						ref, err = app.Add(s.Labels(), t, v)
-						if err != nil {
-							if rerr := app.Rollback(); rerr != nil {
-								err = errors.Wrapf(err, "rollback failed: %v", rerr)
-							}
-
-							return errors.Wrap(err, "add sample")
-						}
-						continue
-					}
-
-					if err = app.AddFast(ref, t, v); err != nil {
+					ref, err = app.Append(ref, s.Labels(), t, v)
+					if err != nil {
 						if rerr := app.Rollback(); rerr != nil {
 							err = errors.Wrapf(err, "rollback failed: %v", rerr)
 						}
 
-						return errors.Wrap(err, "add fast sample")
+						return errors.Wrap(err, "add sample")
 					}
 				}
 

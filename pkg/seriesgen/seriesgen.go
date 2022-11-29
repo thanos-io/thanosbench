@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/prometheus/prometheus/pkg/labels"
+	"github.com/prometheus/prometheus/model/labels"
 )
 
 type sample struct {

@@ -10,9 +10,9 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/pkg/errors"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 	"github.com/oklog/ulid"
-	"github.com/prometheus/prometheus/pkg/labels"
+	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/thanos-io/thanos/pkg/block/metadata"
 	"github.com/thanos-io/thanosbench/pkg/seriesgen"
@@ -92,12 +92,12 @@ func Generate(ctx context.Context, logger log.Logger, goroutines int, dir string
 	}
 
 	bdir := path.Join(dir, id.String())
-	meta, err := metadata.Read(bdir)
+	meta, err := metadata.ReadFromDir(bdir)
 	if err != nil {
 		return ulid.ULID{}, errors.Wrap(err, "meta read")
 	}
 	meta.Thanos = block.Thanos
-	if err := metadata.Write(logger, bdir, meta); err != nil {
+	if err := meta.WriteToDir(logger, bdir); err != nil {
 		return ulid.ULID{}, errors.Wrap(err, "meta write")
 	}
 	return id, nil

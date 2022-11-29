@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/go-kit/kit/log"
+	extflag "github.com/efficientgo/tools/extkingpin"
+	"github.com/go-kit/log"
 	"github.com/oklog/run"
-	"github.com/thanos-io/thanos/pkg/extflag"
 	"github.com/thanos-io/thanosbench/pkg/walgen"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/yaml.v2"
@@ -13,7 +13,7 @@ import (
 
 func registerWalgen(m map[string]setupFunc, app *kingpin.Application) {
 	cmd := app.Command("walgen", "Generates TSDB data into WAL files.")
-	config := extflag.RegisterPathOrContent(cmd, "config", "YAML for series config. See walgen.Config for the format.", true)
+	config := extflag.RegisterPathOrContent(cmd, "config", "YAML for series config. See walgen.Config for the format.", extflag.WithRequired(), extflag.WithEnvSubstitution())
 
 	outputDir := cmd.Flag("output.dir", "Output directory for generated TSDB data.").Required().String()
 
