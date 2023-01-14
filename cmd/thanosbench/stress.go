@@ -26,11 +26,34 @@ var (
 	maxTime = timestamp.FromTime(time.Unix(math.MaxInt64/1000-62135596801, 999999999))
 )
 
+func getMetricsFromStore(ctx context.Context, timeout *time.Duration, c storepb.StoreClient) ([]string, error) {
+	lblvlsCtx, lblvlsCancel := context.WithTimeout(ctx, *timeout)
+	defer lblvlsCancel()
+
+	labelvaluesResp, err := c.LabelValues(lblvlsCtx, &storepb.LabelValuesRequest{
+		Label: labels.MetricName,
+		Start: minTime,
+		End:   maxTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(labelvaluesResp.Warnings) > 0 {
+		return nil, errors.New(fmt.Sprintf("got %#v warnings from LabelValues() call", labelvaluesResp.Warnings))
+	}
+	labelvalues := labelvaluesResp.Values
+	if len(labelvalues) == 0 {
+		return nil, errors.New("the StoreAPI responded with zero metric names")
+	}
+	return labelvalues, nil
+}
+
 func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 	cmd := app.Command("stress", "Stress tests a remote StoreAPI.")
 	workers := cmd.Flag("workers", "Number of go routines for stress testing.").Required().Int()
 	timeout := cmd.Flag("timeout", "Timeout of each operation").Default("60s").Duration()
 	lookback := cmd.Flag("query.look-back", "How much time into the past at max we should look back").Default("300h").Duration()
+	userSpecifiedMetrics := cmd.Flag("metric-name", "Metric to query for").Strings()
 	target := cmd.Arg("target", "IP:PORT pair of the target to stress.").Required().TCP()
 
 	// TODO(GiedriusS): send other requests like Info() as well.
@@ -43,28 +66,19 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 				return err
 			}
 			defer conn.Close()
+
 			c := storepb.NewStoreClient(conn)
-
-			lblvlsCtx, lblvlsCancel := context.WithTimeout(mainCtx, *timeout)
-			defer lblvlsCancel()
-
-			labelvaluesResp, err := c.LabelValues(lblvlsCtx, &storepb.LabelValuesRequest{
-				Label: labels.MetricName,
-				Start: minTime,
-				End:   maxTime,
-			})
-			if err != nil {
-				return err
-			}
-			if len(labelvaluesResp.Warnings) > 0 {
-				return errors.New(fmt.Sprintf("got %#v warnings from LabelValues() call", labelvaluesResp.Warnings))
-			}
-			labelvalues := labelvaluesResp.Values
-			if len(labelvalues) == 0 {
-				return errors.New("the StoreAPI responded with zero metric names")
-			}
-
 			errg, errCtx := errgroup.WithContext(mainCtx)
+
+			var metrics []string
+			if *userSpecifiedMetrics != nil && len(*userSpecifiedMetrics) != 0 {
+				metrics = *userSpecifiedMetrics
+			} else {
+				metrics, err = getMetricsFromStore(mainCtx, timeout, c)
+				if err != nil {
+					return err
+				}
+			}
 
 			for i := 0; i < *workers; i++ {
 				errg.Go(func() error {
@@ -78,7 +92,7 @@ func registerStress(m map[string]setupFunc, app *kingpin.Application) {
 						opCtx, cancel := context.WithTimeout(errCtx, *timeout)
 						defer cancel()
 
-						randomMetric := labelvalues[rand.Intn(len(labelvalues))]
+						randomMetric := metrics[rand.Intn(len(metrics))]
 						max := time.Now().Unix()
 						min := time.Now().Unix() - rand.Int63n(int64(lookback.Seconds()))
 
