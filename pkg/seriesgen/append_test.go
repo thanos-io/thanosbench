@@ -19,7 +19,7 @@ import (
 
 type testSet struct {
 	count int
-	curr  Series
+	curr  storage.Series
 }
 
 func (s *testSet) Next() bool {
@@ -43,9 +43,11 @@ func (s *testSet) Next() bool {
 	return true
 }
 
-func (s *testSet) At() Series { return s.curr }
+func (s *testSet) At() storage.Series { return s.curr }
 
 func (s *testSet) Err() error { return nil }
+
+func (s *testSet) Warnings() storage.Warnings { return storage.Warnings{} }
 
 type testAppendable struct {
 	mtx     sync.Mutex

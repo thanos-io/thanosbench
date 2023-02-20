@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/storage"
+	"github.com/prometheus/prometheus/tsdb/chunkenc"
 )
 
 type sample struct {
@@ -12,53 +14,25 @@ type sample struct {
 	V float64
 }
 
-// SeriesSet contains a set of series.
-type SeriesSet interface {
-	Next() bool
-	At() Series
-	Err() error
-}
-
-// Series exposes a single time series.
-type Series interface {
-	// Labels returns the complete set of labels identifying the series.
-	Labels() labels.Labels
-
-	// Iterator returns a new iterator of the data of the series.
-	// TODO(bwplotka): Consider moving this to tsdb.SeriesIterator if required. This means adding `Seek` method.
-	Iterator() SeriesIterator
-}
-
-// SeriesIterator iterates over the data of a time series.
-// Simplified version of github.com/prometheus/prometheus/tsdb.SeriesIterator
-type SeriesIterator interface {
-	// At returns the current timestamp/value pair.
-	At() (t int64, v float64)
-	// Next advances the iterator by one.
-	Next() bool
-	// Err returns current error.
-	Err() error
-}
-
 type SeriesGen struct {
-	SeriesIterator
+	chunkenc.Iterator
 
 	lset labels.Labels
 }
 
-func NewSeriesGen(lset labels.Labels, si SeriesIterator) *SeriesGen {
-	return &SeriesGen{
-		SeriesIterator: si,
-		lset:           lset,
+func NewSeriesGen(lset labels.Labels, it chunkenc.Iterator) storage.Series {
+	return &storage.SeriesEntry{
+		Lset: lset,
+		SampleIteratorFn: func() chunkenc.Iterator {
+			return it
+		},
 	}
 }
 func (s *SeriesGen) Labels() labels.Labels { return s.lset }
 
-func (s *SeriesGen) Iterator() SeriesIterator { return s }
-
-var _ SeriesIterator = &GaugeGen{}
-var _ SeriesIterator = &CounterGen{}
-var _ SeriesIterator = &ValGen{}
+var _ chunkenc.Iterator = &GaugeGen{}
+var _ chunkenc.Iterator = &CounterGen{}
+var _ chunkenc.Iterator = &ValGen{}
 
 type Characteristics struct {
 	Jitter         float64       `yaml:"jitter"`
@@ -123,6 +97,8 @@ func (g *GaugeGen) At() (t int64, v float64) {
 }
 
 func (g *GaugeGen) Err() error { return nil }
+
+func (g *GaugeGen) Seek(_ int64) bool { return true }
 
 // TODO(bwplotka): Improve. Does not work well (: Too naive.
 // Add resets etc.
@@ -215,6 +191,8 @@ func (g *CounterGen) At() (int64, float64) { return g.buff[0].T, g.buff[0].V }
 
 func (g *CounterGen) Err() error { return nil }
 
+func (g *CounterGen) Seek(_ int64) bool { return true }
+
 type ValGen struct {
 	interval         time.Duration
 	maxTime, minTime int64
@@ -252,3 +230,5 @@ func (g *ValGen) At() (t int64, v float64) {
 }
 
 func (g *ValGen) Err() error { return nil }
+
+func (g *ValGen) Seek(_ int64) bool { return true }

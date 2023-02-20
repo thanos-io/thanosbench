@@ -14,6 +14,7 @@ import (
 	"github.com/oklog/ulid"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
+	"github.com/prometheus/prometheus/tsdb/chunkenc"
 	"github.com/thanos-io/thanos/pkg/block/metadata"
 	"github.com/thanos-io/thanosbench/pkg/seriesgen"
 )
@@ -41,7 +42,7 @@ const (
 	Gauge   GenType = "GAUGE"
 )
 
-func (g GenType) Create(random *rand.Rand, mint, maxt int64, opts seriesgen.Characteristics) (seriesgen.SeriesIterator, error) {
+func (g GenType) Create(random *rand.Rand, mint, maxt int64, opts seriesgen.Characteristics) (chunkenc.Iterator, error) {
 	switch g {
 	case Random:
 		return seriesgen.NewValGen(random, mint, maxt, opts), nil
@@ -110,7 +111,7 @@ type blockSeriesSet struct {
 	target  int
 	err     error
 
-	curr seriesgen.Series
+	curr storage.Series
 }
 
 func (s *blockSeriesSet) Next() bool {
@@ -158,6 +159,8 @@ func (s *blockSeriesSet) Next() bool {
 	return true
 }
 
-func (s *blockSeriesSet) At() seriesgen.Series { return s.curr }
+func (s *blockSeriesSet) At() storage.Series { return s.curr }
 
 func (s *blockSeriesSet) Err() error { return s.err }
+
+func (s *blockSeriesSet) Warnings() storage.Warnings { return storage.Warnings{} }
