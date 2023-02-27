@@ -85,7 +85,7 @@ func GenCadvisor(gen *mimic.Generator, namespace string) {
 
 	cadvisor := corev1.Container{
 		Name:  "cadvisor",
-		Image: dockerimage.Image{Organization: "k8s.gcr.io", Project: "cadvisor", Version: "v0.30.2"}.String(),
+		Image: dockerimage.Image{Organization: "registry.k8s.io", Project: "cadvisor", Version: "v0.30.2"}.String(),
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          "http",
