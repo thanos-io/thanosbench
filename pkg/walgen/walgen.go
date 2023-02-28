@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/model/timestamp"
+	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/tsdb"
 	"github.com/thanos-io/thanosbench/pkg/seriesgen"
 )
@@ -107,7 +108,7 @@ func GenerateTSDBWAL(logger log.Logger, dir string, config Config) error {
 }
 
 type Set struct {
-	s    []seriesgen.Series
+	s    []storage.Series
 	curr int
 }
 
@@ -119,6 +120,8 @@ func (s *Set) Next() bool {
 	return true
 }
 
-func (s *Set) At() seriesgen.Series { return s.s[s.curr-1] }
+func (s *Set) At() storage.Series { return s.s[s.curr-1] }
 
 func (s *Set) Err() error { return nil }
+
+func (s *Set) Warnings() storage.Warnings { return storage.Warnings{} }
